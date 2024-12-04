@@ -41,4 +41,7 @@ public class Route implements Serializable {
 
   @Column(name = "deleted_at")
   private LocalDateTime deletedAt;
+
+  @Column(name = "enabled", nullable = false)
+  private boolean enabled = true;
 }

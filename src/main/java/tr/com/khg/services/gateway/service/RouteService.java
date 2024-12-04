@@ -2,6 +2,7 @@ package tr.com.khg.services.gateway.service;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.route.RouteDefinition;
 import org.springframework.cloud.gateway.route.RouteDefinitionLocator;
 import org.springframework.cloud.gateway.route.RouteDefinitionWriter;
@@ -14,6 +15,7 @@ import tr.com.khg.services.gateway.model.response.RouteResponse;
 import tr.com.khg.services.gateway.model.response.RoutesResponse;
 import tr.com.khg.services.gateway.repository.RouteRepository;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RouteService {
@@ -24,10 +26,28 @@ public class RouteService {
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
-    Mono.fromCallable(routeRepository::findByDeletedAtIsNull)
+    log.info("Loading routes from database");
+
+    Mono.fromCallable(() -> routeRepository.findByEnabled(true))
         .subscribeOn(Schedulers.boundedElastic())
         .flatMapIterable(routes -> routes)
-        .flatMap(route -> routeDefinitionWriter.save(Mono.just(route.getRouteDefinition())))
+        .doOnNext(
+            route ->
+                log.debug("Loading route: {} - {}", route.getRouteId(), route.getRouteDefinition()))
+        .flatMap(
+            route ->
+                routeDefinitionWriter
+                    .save(Mono.just(route.getRouteDefinition()))
+                    .doOnSuccess(
+                        v -> log.debug("Route loaded successfully: {}", route.getRouteId()))
+                    .doOnError(
+                        error ->
+                            log.error(
+                                "Error loading route {}: {}",
+                                route.getRouteId(),
+                                error.getMessage())))
+        .doOnComplete(() -> log.info("All routes loaded successfully"))
+        .doOnError(error -> log.error("Error loading routes: {}", error.getMessage()))
         .subscribe();
   }
 
@@ -35,6 +55,7 @@ public class RouteService {
     return routeDefinitionLocator
         .getRouteDefinitions()
         .collectList()
+        .doOnNext(routes -> log.debug("Found {} routes", routes.size()))
         .map(routes -> RoutesResponse.builder().routes(routes).build());
   }
 
@@ -72,5 +93,32 @@ public class RouteService {
         .subscribeOn(Schedulers.boundedElastic())
         .then(routeDefinitionWriter.delete(Mono.just(routeId)))
         .then(Mono.just(RouteResponse.builder().routeId(routeId).build()));
+  }
+
+  @Transactional
+  public Mono<RouteResponse> updateRouteStatus(String routeId, boolean enabled) {
+    return Mono.fromCallable(
+            () -> {
+              Route route =
+                  routeRepository
+                      .findByRouteId(routeId)
+                      .orElseThrow(() -> new RuntimeException("Route not found: " + routeId));
+
+              route.setEnabled(enabled);
+              Route savedRoute = routeRepository.save(route);
+
+              RouteDefinition routeDefinition = savedRoute.getRouteDefinition();
+              routeDefinition.setEnabled(enabled);
+              routeDefinitionWriter.save(Mono.just(routeDefinition)).subscribe();
+
+              return savedRoute;
+            })
+        .subscribeOn(Schedulers.boundedElastic())
+        .map(
+            route ->
+                RouteResponse.builder()
+                    .routeId(route.getRouteId())
+                    .routeDefinition(route.getRouteDefinition())
+                    .build());
   }
 }

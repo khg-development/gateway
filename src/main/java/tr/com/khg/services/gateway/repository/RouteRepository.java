@@ -8,5 +8,5 @@ import tr.com.khg.services.gateway.entity.Route;
 public interface RouteRepository extends JpaRepository<Route, Long> {
   Optional<Route> findByRouteId(String routeId);
 
-  List<Route> findByDeletedAtIsNull();
+  List<Route> findByEnabled(boolean enabled);
 }

@@ -1,9 +1,11 @@
 package tr.com.khg.services.gateway.web.rest;
 
+import jakarta.validation.Valid;
 import org.springframework.cloud.gateway.route.RouteDefinition;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
+import tr.com.khg.services.gateway.model.request.RouteStatusRequest;
 import tr.com.khg.services.gateway.model.response.RouteResponse;
 import tr.com.khg.services.gateway.model.response.RoutesResponse;
 import tr.com.khg.services.gateway.service.RouteService;
@@ -32,5 +34,11 @@ public class RouteController {
   @DeleteMapping("/routes/{routeId}")
   public ResponseEntity<Mono<RouteResponse>> deleteRoute(@PathVariable String routeId) {
     return ResponseEntity.ok(routeService.deleteRoute(routeId));
+  }
+
+  @PostMapping("/routes/{routeId}/status")
+  public ResponseEntity<Mono<RouteResponse>> updateRouteStatus(
+      @PathVariable String routeId, @Valid @RequestBody RouteStatusRequest request) {
+    return ResponseEntity.ok(routeService.updateRouteStatus(routeId, request.getEnabled()));
   }
 }
