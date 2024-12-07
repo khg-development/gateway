@@ -12,5 +12,6 @@ import org.springframework.cloud.gateway.route.RouteDefinition;
 @AllArgsConstructor
 public class RouteResponse {
   private String routeId;
+  private Boolean enabled;
   private RouteDefinition routeDefinition;
 }

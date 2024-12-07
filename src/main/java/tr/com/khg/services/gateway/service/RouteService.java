@@ -113,6 +113,7 @@ public class RouteService {
             route ->
                 RouteResponse.builder()
                     .routeId(route.getRouteId())
+                    .enabled(true)
                     .routeDefinition(route.getRouteDefinition())
                     .build());
   }
@@ -147,27 +148,33 @@ public class RouteService {
                   routeRepository
                       .findByRouteId(routeId)
                       .orElseThrow(() -> new RuntimeException("Route not found: " + routeId));
-
               route.setEnabled(enabled);
-              Route savedRoute = routeRepository.save(route);
-
-              RouteDefinition routeDefinition = savedRoute.getRouteDefinition();
-              routeDefinition.setEnabled(enabled);
-              return savedRoute;
+              return routeRepository.save(route);
             })
         .subscribeOn(Schedulers.boundedElastic())
         .flatMap(
-            route ->
-                routeDefinitionWriter
+            route -> {
+              if (enabled) {
+                return routeDefinitionWriter
                     .save(Mono.just(route.getRouteDefinition()))
                     .then(
                         Mono.fromRunnable(
                             () -> eventPublisher.publishEvent(new RefreshRoutesEvent(this))))
-                    .thenReturn(route))
+                    .thenReturn(route);
+              } else {
+                return routeDefinitionWriter
+                    .delete(Mono.just(routeId))
+                    .then(
+                        Mono.fromRunnable(
+                            () -> eventPublisher.publishEvent(new RefreshRoutesEvent(this))))
+                    .thenReturn(route);
+              }
+            })
         .map(
             route ->
                 RouteResponse.builder()
                     .routeId(route.getRouteId())
+                    .enabled(enabled)
                     .routeDefinition(route.getRouteDefinition())
                     .build());
   }
@@ -176,10 +183,16 @@ public class RouteService {
     return Mono.fromCallable(
             () ->
                 routeRepository.findByApiProxyName(proxyName).stream()
-                    .map(Route::getRouteDefinition)
+                    .map(
+                        route ->
+                            RouteResponse.builder()
+                                .routeId(route.getRouteId())
+                                .enabled(route.isEnabled())
+                                .routeDefinition(route.getRouteDefinition())
+                                .build())
                     .collect(Collectors.toList()))
         .subscribeOn(Schedulers.boundedElastic())
-        .map(routeDefinitions -> RoutesResponse.builder().routes(routeDefinitions).build())
+        .map(routeResponses -> RoutesResponse.builder().routes(routeResponses).build())
         .doOnNext(
             response ->
                 log.debug("Found {} routes for proxy: {}", response.getRoutes().size(), proxyName));

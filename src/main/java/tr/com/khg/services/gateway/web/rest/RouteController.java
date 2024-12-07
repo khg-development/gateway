@@ -26,7 +26,7 @@ public class RouteController {
   }
 
   @PostMapping
-  public ResponseEntity<Mono<RouteResponse>> addRoute(@RequestBody RouteRequest routeRequest) {
+  public ResponseEntity<Mono<RouteResponse>> addRoute(@Valid @RequestBody RouteRequest routeRequest) {
     return ResponseEntity.ok(routeService.addRoute(routeRequest));
   }
 
