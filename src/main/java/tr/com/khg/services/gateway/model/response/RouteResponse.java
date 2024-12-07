@@ -11,6 +11,6 @@ import org.springframework.cloud.gateway.route.RouteDefinition;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RouteResponse {
-    private String routeId;
-    private RouteDefinition routeDefinition;
-} 
+  private String routeId;
+  private RouteDefinition routeDefinition;
+}

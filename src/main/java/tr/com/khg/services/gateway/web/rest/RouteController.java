@@ -1,17 +1,17 @@
 package tr.com.khg.services.gateway.web.rest;
 
 import jakarta.validation.Valid;
-import org.springframework.cloud.gateway.route.RouteDefinition;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
+import tr.com.khg.services.gateway.model.request.RouteRequest;
 import tr.com.khg.services.gateway.model.request.RouteStatusRequest;
 import tr.com.khg.services.gateway.model.response.RouteResponse;
 import tr.com.khg.services.gateway.model.response.RoutesResponse;
 import tr.com.khg.services.gateway.service.RouteService;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/v1/routes")
 public class RouteController {
 
   private final RouteService routeService;
@@ -26,9 +26,8 @@ public class RouteController {
   }
 
   @PostMapping("/routes")
-  public ResponseEntity<Mono<RouteResponse>> addRoute(
-      @RequestBody RouteDefinition routeDefinition) {
-    return ResponseEntity.ok(routeService.addRoute(routeDefinition));
+  public ResponseEntity<Mono<RouteResponse>> addRoute(@RequestBody RouteRequest routeRequest) {
+    return ResponseEntity.ok(routeService.addRoute(routeRequest));
   }
 
   @DeleteMapping("/routes/{routeId}")

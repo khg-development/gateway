@@ -1,19 +1,25 @@
 package tr.com.khg.services.gateway.service;
 
 import jakarta.annotation.PostConstruct;
+import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cloud.gateway.handler.predicate.PredicateDefinition;
 import org.springframework.cloud.gateway.route.RouteDefinition;
 import org.springframework.cloud.gateway.route.RouteDefinitionWriter;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import tr.com.khg.services.gateway.entity.ApiProxy;
 import tr.com.khg.services.gateway.entity.Route;
+import tr.com.khg.services.gateway.model.request.RouteRequest;
 import tr.com.khg.services.gateway.model.response.RouteResponse;
 import tr.com.khg.services.gateway.model.response.RoutesResponse;
+import tr.com.khg.services.gateway.repository.ApiProxyRepository;
 import tr.com.khg.services.gateway.repository.RouteRepository;
 
 @Slf4j
@@ -23,6 +29,7 @@ public class RouteService {
 
   private final RouteRepository routeRepository;
   private final RouteDefinitionWriter routeDefinitionWriter;
+  private final ApiProxyRepository apiProxyRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -54,36 +61,64 @@ public class RouteService {
   public Mono<RoutesResponse> getAllRoutes() {
     return Mono.fromCallable(routeRepository::findAll)
         .subscribeOn(Schedulers.boundedElastic())
-        .map(routes -> {
-            List<RouteDefinition> routeDefinitions = routes.stream()
-                .map(Route::getRouteDefinition)
-                .collect(Collectors.toList());
-            return RoutesResponse.builder()
-                .routes(routeDefinitions)
-                .build();
-        })
-        .doOnNext(response -> log.debug("Found {} routes in database", response.getRoutes().size()));
+        .map(
+            routes -> {
+              List<RouteDefinition> routeDefinitions =
+                  routes.stream().map(Route::getRouteDefinition).collect(Collectors.toList());
+              return RoutesResponse.builder().routes(routeDefinitions).build();
+            })
+        .doOnNext(
+            response -> log.debug("Found {} routes in database", response.getRoutes().size()));
   }
 
   @Transactional
-  public Mono<RouteResponse> addRoute(RouteDefinition routeDefinition) {
+  public Mono<RouteResponse> addRoute(RouteRequest request) {
     return Mono.fromCallable(
             () -> {
+              ApiProxy service =
+                  apiProxyRepository
+                      .findByName(request.getServiceName())
+                      .orElseThrow(
+                          () ->
+                              new RuntimeException(
+                                  "Service not found: " + request.getServiceName()));
+
+              RouteDefinition routeDefinition = new RouteDefinition();
+              routeDefinition.setId(request.getRouteId());
+              routeDefinition.setUri(URI.create(service.getUri()));
+
+              PredicateDefinition pathPredicate = new PredicateDefinition();
+              pathPredicate.setName("Path");
+              pathPredicate.addArg("pattern", request.getPath());
+
+              PredicateDefinition methodPredicate = new PredicateDefinition();
+              methodPredicate.setName("Method");
+              methodPredicate.addArg("method", request.getMethod().name());
+
+              List<PredicateDefinition> predicates = new ArrayList<>();
+              predicates.add(pathPredicate);
+              predicates.add(methodPredicate);
+              routeDefinition.setPredicates(predicates);
+
               Route route =
                   Route.builder()
-                      .routeId(routeDefinition.getId())
+                      .routeId(request.getRouteId())
                       .routeDefinition(routeDefinition)
+                      .enabled(true)
                       .build();
+
               return routeRepository.save(route);
             })
         .subscribeOn(Schedulers.boundedElastic())
-        .then(routeDefinitionWriter.save(Mono.just(routeDefinition)))
-        .then(
-            Mono.just(
+        .flatMap(
+            route ->
+                routeDefinitionWriter.save(Mono.just(route.getRouteDefinition())).thenReturn(route))
+        .map(
+            route ->
                 RouteResponse.builder()
-                    .routeId(routeDefinition.getId())
-                    .routeDefinition(routeDefinition)
-                    .build()));
+                    .routeId(route.getRouteId())
+                    .routeDefinition(route.getRouteDefinition())
+                    .build());
   }
 
   @Transactional
