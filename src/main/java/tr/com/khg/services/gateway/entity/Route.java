@@ -3,7 +3,6 @@ package tr.com.khg.services.gateway.entity;
 import jakarta.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDateTime;
-
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -44,4 +43,8 @@ public class Route implements Serializable {
 
   @Column(name = "enabled", nullable = false)
   private boolean enabled = true;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "api_proxy_id", nullable = false)
+  private ApiProxy apiProxy;
 }

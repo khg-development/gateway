@@ -20,22 +20,22 @@ public class RouteController {
     this.routeService = routeService;
   }
 
-  @GetMapping("/routes")
-  public ResponseEntity<Mono<RoutesResponse>> getRoutes() {
-    return ResponseEntity.ok(routeService.getAllRoutes());
+  @GetMapping("/{proxyName}")
+  public ResponseEntity<Mono<RoutesResponse>> getRoutesByProxy(@PathVariable String proxyName) {
+    return ResponseEntity.ok(routeService.getRoutesByProxy(proxyName));
   }
 
-  @PostMapping("/routes")
+  @PostMapping
   public ResponseEntity<Mono<RouteResponse>> addRoute(@RequestBody RouteRequest routeRequest) {
     return ResponseEntity.ok(routeService.addRoute(routeRequest));
   }
 
-  @DeleteMapping("/routes/{routeId}")
+  @DeleteMapping("/{routeId}")
   public ResponseEntity<Mono<RouteResponse>> deleteRoute(@PathVariable String routeId) {
     return ResponseEntity.ok(routeService.deleteRoute(routeId));
   }
 
-  @PostMapping("/routes/{routeId}/status")
+  @PostMapping("/{routeId}/status")
   public ResponseEntity<Mono<RouteResponse>> updateRouteStatus(
       @PathVariable String routeId, @Valid @RequestBody RouteStatusRequest request) {
     return ResponseEntity.ok(routeService.updateRouteStatus(routeId, request.getEnabled()));

@@ -58,24 +58,11 @@ public class RouteService {
         .subscribe();
   }
 
-  public Mono<RoutesResponse> getAllRoutes() {
-    return Mono.fromCallable(routeRepository::findAll)
-        .subscribeOn(Schedulers.boundedElastic())
-        .map(
-            routes -> {
-              List<RouteDefinition> routeDefinitions =
-                  routes.stream().map(Route::getRouteDefinition).collect(Collectors.toList());
-              return RoutesResponse.builder().routes(routeDefinitions).build();
-            })
-        .doOnNext(
-            response -> log.debug("Found {} routes in database", response.getRoutes().size()));
-  }
-
   @Transactional
   public Mono<RouteResponse> addRoute(RouteRequest request) {
     return Mono.fromCallable(
             () -> {
-              ApiProxy service =
+              ApiProxy apiProxy =
                   apiProxyRepository
                       .findByName(request.getServiceName())
                       .orElseThrow(
@@ -85,7 +72,7 @@ public class RouteService {
 
               RouteDefinition routeDefinition = new RouteDefinition();
               routeDefinition.setId(request.getRouteId());
-              routeDefinition.setUri(URI.create(service.getUri()));
+              routeDefinition.setUri(URI.create(apiProxy.getUri()));
 
               PredicateDefinition pathPredicate = new PredicateDefinition();
               pathPredicate.setName("Path");
@@ -104,6 +91,7 @@ public class RouteService {
                   Route.builder()
                       .routeId(request.getRouteId())
                       .routeDefinition(routeDefinition)
+                      .apiProxy(apiProxy)
                       .enabled(true)
                       .build();
 
@@ -161,5 +149,18 @@ public class RouteService {
                     .routeId(route.getRouteId())
                     .routeDefinition(route.getRouteDefinition())
                     .build());
+  }
+
+  public Mono<RoutesResponse> getRoutesByProxy(String proxyName) {
+    return Mono.fromCallable(
+            () ->
+                routeRepository.findByApiProxyName(proxyName).stream()
+                    .map(Route::getRouteDefinition)
+                    .collect(Collectors.toList()))
+        .subscribeOn(Schedulers.boundedElastic())
+        .map(routeDefinitions -> RoutesResponse.builder().routes(routeDefinitions).build())
+        .doOnNext(
+            response ->
+                log.debug("Found {} routes for proxy: {}", response.getRoutes().size(), proxyName));
   }
 }

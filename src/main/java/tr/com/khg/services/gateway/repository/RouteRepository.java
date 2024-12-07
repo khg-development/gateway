@@ -9,4 +9,6 @@ public interface RouteRepository extends JpaRepository<Route, Long> {
   Optional<Route> findByRouteId(String routeId);
 
   List<Route> findByEnabled(boolean enabled);
+
+  List<Route> findByApiProxyName(String proxyName);
 }
