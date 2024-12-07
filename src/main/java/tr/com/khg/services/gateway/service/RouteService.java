@@ -7,9 +7,11 @@ import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cloud.gateway.event.RefreshRoutesEvent;
 import org.springframework.cloud.gateway.handler.predicate.PredicateDefinition;
 import org.springframework.cloud.gateway.route.RouteDefinition;
 import org.springframework.cloud.gateway.route.RouteDefinitionWriter;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
@@ -28,8 +30,9 @@ import tr.com.khg.services.gateway.repository.RouteRepository;
 public class RouteService {
 
   private final RouteRepository routeRepository;
-  private final RouteDefinitionWriter routeDefinitionWriter;
   private final ApiProxyRepository apiProxyRepository;
+  private final ApplicationEventPublisher eventPublisher;
+  private final RouteDefinitionWriter routeDefinitionWriter;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -100,7 +103,12 @@ public class RouteService {
         .subscribeOn(Schedulers.boundedElastic())
         .flatMap(
             route ->
-                routeDefinitionWriter.save(Mono.just(route.getRouteDefinition())).thenReturn(route))
+                routeDefinitionWriter
+                    .save(Mono.just(route.getRouteDefinition()))
+                    .then(
+                        Mono.fromRunnable(
+                            () -> eventPublisher.publishEvent(new RefreshRoutesEvent(this))))
+                    .thenReturn(route))
         .map(
             route ->
                 RouteResponse.builder()
@@ -120,8 +128,15 @@ public class RouteService {
               return routeRepository.save(route);
             })
         .subscribeOn(Schedulers.boundedElastic())
-        .then(routeDefinitionWriter.delete(Mono.just(routeId)))
-        .then(Mono.just(RouteResponse.builder().routeId(routeId).build()));
+        .flatMap(
+            route ->
+                routeDefinitionWriter
+                    .delete(Mono.just(routeId))
+                    .then(
+                        Mono.fromRunnable(
+                            () -> eventPublisher.publishEvent(new RefreshRoutesEvent(this))))
+                    .thenReturn(route))
+        .map(route -> RouteResponse.builder().routeId(route.getRouteId()).build());
   }
 
   @Transactional
@@ -138,11 +153,17 @@ public class RouteService {
 
               RouteDefinition routeDefinition = savedRoute.getRouteDefinition();
               routeDefinition.setEnabled(enabled);
-              routeDefinitionWriter.save(Mono.just(routeDefinition)).subscribe();
-
               return savedRoute;
             })
         .subscribeOn(Schedulers.boundedElastic())
+        .flatMap(
+            route ->
+                routeDefinitionWriter
+                    .save(Mono.just(route.getRouteDefinition()))
+                    .then(
+                        Mono.fromRunnable(
+                            () -> eventPublisher.publishEvent(new RefreshRoutesEvent(this))))
+                    .thenReturn(route))
         .map(
             route ->
                 RouteResponse.builder()
