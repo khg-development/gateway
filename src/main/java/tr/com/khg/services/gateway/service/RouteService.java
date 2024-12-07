@@ -1,10 +1,11 @@
 package tr.com.khg.services.gateway.service;
 
 import jakarta.annotation.PostConstruct;
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.route.RouteDefinition;
-import org.springframework.cloud.gateway.route.RouteDefinitionLocator;
 import org.springframework.cloud.gateway.route.RouteDefinitionWriter;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +23,6 @@ public class RouteService {
 
   private final RouteRepository routeRepository;
   private final RouteDefinitionWriter routeDefinitionWriter;
-  private final RouteDefinitionLocator routeDefinitionLocator;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -52,11 +52,17 @@ public class RouteService {
   }
 
   public Mono<RoutesResponse> getAllRoutes() {
-    return routeDefinitionLocator
-        .getRouteDefinitions()
-        .collectList()
-        .doOnNext(routes -> log.debug("Found {} routes", routes.size()))
-        .map(routes -> RoutesResponse.builder().routes(routes).build());
+    return Mono.fromCallable(routeRepository::findAll)
+        .subscribeOn(Schedulers.boundedElastic())
+        .map(routes -> {
+            List<RouteDefinition> routeDefinitions = routes.stream()
+                .map(Route::getRouteDefinition)
+                .collect(Collectors.toList());
+            return RoutesResponse.builder()
+                .routes(routeDefinitions)
+                .build();
+        })
+        .doOnNext(response -> log.debug("Found {} routes in database", response.getRoutes().size()));
   }
 
   @Transactional
