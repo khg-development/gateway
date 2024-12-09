@@ -3,6 +3,8 @@ package tr.com.khg.services.gateway.entity;
 import jakarta.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -55,4 +57,7 @@ public class Route implements Serializable {
   @Enumerated(EnumType.STRING)
   @Column(name = "method", nullable = false)
   private HttpMethods method;
+
+  @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<Header> headers = new ArrayList<>();
 }

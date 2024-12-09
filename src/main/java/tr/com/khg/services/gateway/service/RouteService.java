@@ -3,11 +3,14 @@ package tr.com.khg.services.gateway.service;
 import jakarta.annotation.PostConstruct;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.event.RefreshRoutesEvent;
+import org.springframework.cloud.gateway.filter.FilterDefinition;
 import org.springframework.cloud.gateway.handler.predicate.PredicateDefinition;
 import org.springframework.cloud.gateway.route.RouteDefinition;
 import org.springframework.cloud.gateway.route.RouteDefinitionWriter;
@@ -17,7 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import tr.com.khg.services.gateway.entity.ApiProxy;
+import tr.com.khg.services.gateway.entity.Header;
 import tr.com.khg.services.gateway.entity.Route;
+import tr.com.khg.services.gateway.entity.enums.HeaderType;
 import tr.com.khg.services.gateway.exception.DuplicateRouteException;
 import tr.com.khg.services.gateway.model.request.RouteRequest;
 import tr.com.khg.services.gateway.model.response.RouteResponse;
@@ -111,6 +116,45 @@ public class RouteService {
               predicates.add(methodPredicate);
               routeDefinition.setPredicates(predicates);
 
+              List<FilterDefinition> filters = new ArrayList<>();
+              if (request.getHeaders() != null && !request.getHeaders().isEmpty()) {
+                Map<HeaderType, List<RouteRequest.HeaderRequest>> groupedHeaders =
+                    request.getHeaders().stream()
+                        .collect(Collectors.groupingBy(RouteRequest.HeaderRequest::getType));
+
+                if (groupedHeaders.containsKey(HeaderType.ADD_REQUEST_HEADER)) {
+                  groupedHeaders
+                      .get(HeaderType.ADD_REQUEST_HEADER)
+                      .forEach(
+                          header -> {
+                            FilterDefinition headerFilter = new FilterDefinition();
+                            headerFilter.setName(HeaderType.ADD_REQUEST_HEADER.getFilterName());
+                            Map<String, String> args = new HashMap<>();
+                            args.put("_genkey_0", header.getKey());
+                            args.put("_genkey_1", header.getValue());
+                            headerFilter.setArgs(args);
+                            filters.add(headerFilter);
+                          });
+                }
+
+                if (groupedHeaders.containsKey(HeaderType.ADD_REQUEST_HEADER_IF_NOT_PRESENT)) {
+                  FilterDefinition headerFilter = new FilterDefinition();
+                  headerFilter.setName(
+                      HeaderType.ADD_REQUEST_HEADER_IF_NOT_PRESENT.getFilterName());
+
+                  String headerArgs =
+                      groupedHeaders.get(HeaderType.ADD_REQUEST_HEADER_IF_NOT_PRESENT).stream()
+                          .map(header -> header.getKey() + ":" + header.getValue())
+                          .collect(Collectors.joining(","));
+
+                  Map<String, String> args = new HashMap<>();
+                  args.put("_genkey_0", headerArgs);
+                  headerFilter.setArgs(args);
+                  filters.add(headerFilter);
+                }
+              }
+              routeDefinition.setFilters(filters);
+
               Route route =
                   Route.builder()
                       .routeId(request.getRouteId())
@@ -120,6 +164,21 @@ public class RouteService {
                       .method(request.getMethod())
                       .enabled(true)
                       .build();
+
+              if (request.getHeaders() != null && !request.getHeaders().isEmpty()) {
+                List<Header> headers =
+                    request.getHeaders().stream()
+                        .map(
+                            headerRequest ->
+                                Header.builder()
+                                    .key(headerRequest.getKey())
+                                    .value(headerRequest.getValue())
+                                    .type(headerRequest.getType())
+                                    .route(route)
+                                    .build())
+                        .collect(Collectors.toList());
+                route.setHeaders(headers);
+              }
 
               return routeRepository.save(route);
             })
