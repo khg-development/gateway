@@ -18,6 +18,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import tr.com.khg.services.gateway.entity.ApiProxy;
 import tr.com.khg.services.gateway.entity.Route;
+import tr.com.khg.services.gateway.exception.DuplicateRouteException;
 import tr.com.khg.services.gateway.model.request.RouteRequest;
 import tr.com.khg.services.gateway.model.response.RouteResponse;
 import tr.com.khg.services.gateway.model.response.RoutesResponse;
@@ -73,6 +74,21 @@ public class RouteService {
                               new RuntimeException(
                                   "Service not found: " + request.getServiceName()));
 
+              routeRepository
+                  .findByRouteIdAndApiProxy(request.getRouteId(), apiProxy)
+                  .ifPresent(r -> {
+                      throw new DuplicateRouteException(
+                          "Bu route ID zaten bu proxy için kullanılmaktadır: " + request.getRouteId());
+                  });
+
+              routeRepository
+                  .findByApiProxyAndPathAndMethod(apiProxy, request.getPath(), request.getMethod())
+                  .ifPresent(r -> {
+                      throw new DuplicateRouteException(
+                          "Bu path ve HTTP metodu kombinasyonu zaten bu proxy için tanımlanmıştır: "
+                          + request.getPath() + " - " + request.getMethod());
+                  });
+
               RouteDefinition routeDefinition = new RouteDefinition();
               routeDefinition.setId(request.getRouteId());
               routeDefinition.setUri(URI.create(apiProxy.getUri()));
@@ -95,6 +111,8 @@ public class RouteService {
                       .routeId(request.getRouteId())
                       .routeDefinition(routeDefinition)
                       .apiProxy(apiProxy)
+                      .path(request.getPath())
+                      .method(request.getMethod())
                       .enabled(true)
                       .build();
 
@@ -113,8 +131,9 @@ public class RouteService {
             route ->
                 RouteResponse.builder()
                     .routeId(route.getRouteId())
-                    .enabled(true)
-                    .routeDefinition(route.getRouteDefinition())
+                    .enabled(route.isEnabled())
+                    .path(route.getPath())
+                    .method(route.getMethod())
                     .build());
   }
 
@@ -174,8 +193,9 @@ public class RouteService {
             route ->
                 RouteResponse.builder()
                     .routeId(route.getRouteId())
-                    .enabled(enabled)
-                    .routeDefinition(route.getRouteDefinition())
+                    .enabled(route.isEnabled())
+                    .path(route.getPath())
+                    .method(route.getMethod())
                     .build());
   }
 
@@ -188,7 +208,8 @@ public class RouteService {
                             RouteResponse.builder()
                                 .routeId(route.getRouteId())
                                 .enabled(route.isEnabled())
-                                .routeDefinition(route.getRouteDefinition())
+                                .path(route.getPath())
+                                .method(route.getMethod())
                                 .build())
                     .collect(Collectors.toList()))
         .subscribeOn(Schedulers.boundedElastic())

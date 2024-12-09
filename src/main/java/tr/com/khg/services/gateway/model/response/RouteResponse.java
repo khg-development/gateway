@@ -4,7 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.cloud.gateway.route.RouteDefinition;
+import tr.com.khg.services.gateway.entity.enums.HttpMethods;
 
 @Data
 @Builder
@@ -13,5 +13,6 @@ import org.springframework.cloud.gateway.route.RouteDefinition;
 public class RouteResponse {
   private String routeId;
   private Boolean enabled;
-  private RouteDefinition routeDefinition;
+  private String path;
+  private HttpMethods method;
 }

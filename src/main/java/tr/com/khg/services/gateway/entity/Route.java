@@ -9,6 +9,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 import org.springframework.cloud.gateway.route.RouteDefinition;
+import tr.com.khg.services.gateway.entity.enums.HttpMethods;
 
 @Getter
 @Setter
@@ -47,4 +48,11 @@ public class Route implements Serializable {
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "api_proxy_id", nullable = false)
   private ApiProxy apiProxy;
+
+  @Column(name = "path", nullable = false)
+  private String path;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "method", nullable = false)
+  private HttpMethods method;
 }
