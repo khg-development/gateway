@@ -12,7 +12,7 @@ public interface RouteRepository extends JpaRepository<Route, Long> {
 
   List<Route> findByEnabled(boolean enabled);
 
-  List<Route> findByApiProxyName(String proxyName);
+  List<Route> findByApiProxyNameOrderById(String proxyName);
 
   Optional<Route> findByRouteIdAndApiProxy(String routeId, ApiProxy apiProxy);
 

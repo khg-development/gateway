@@ -76,18 +76,23 @@ public class RouteService {
 
               routeRepository
                   .findByRouteIdAndApiProxy(request.getRouteId(), apiProxy)
-                  .ifPresent(r -> {
-                      throw new DuplicateRouteException(
-                          "Bu route ID zaten bu proxy için kullanılmaktadır: " + request.getRouteId());
-                  });
+                  .ifPresent(
+                      r -> {
+                        throw new DuplicateRouteException(
+                            "Bu route ID zaten bu proxy için kullanılmaktadır: "
+                                + request.getRouteId());
+                      });
 
               routeRepository
                   .findByApiProxyAndPathAndMethod(apiProxy, request.getPath(), request.getMethod())
-                  .ifPresent(r -> {
-                      throw new DuplicateRouteException(
-                          "Bu path ve HTTP metodu kombinasyonu zaten bu proxy için tanımlanmıştır: "
-                          + request.getPath() + " - " + request.getMethod());
-                  });
+                  .ifPresent(
+                      r -> {
+                        throw new DuplicateRouteException(
+                            "Bu path ve HTTP metodu kombinasyonu zaten bu proxy için tanımlanmıştır: "
+                                + request.getPath()
+                                + " - "
+                                + request.getMethod());
+                      });
 
               RouteDefinition routeDefinition = new RouteDefinition();
               routeDefinition.setId(request.getRouteId());
@@ -202,7 +207,7 @@ public class RouteService {
   public Mono<RoutesResponse> getRoutesByProxy(String proxyName) {
     return Mono.fromCallable(
             () ->
-                routeRepository.findByApiProxyName(proxyName).stream()
+                routeRepository.findByApiProxyNameOrderById(proxyName).stream()
                     .map(
                         route ->
                             RouteResponse.builder()
