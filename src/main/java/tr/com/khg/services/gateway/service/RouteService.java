@@ -215,7 +215,7 @@ public class RouteService {
     existingRoute.setMethod(request.getMethod());
 
     existingRoute.getRouteHeaderConfigurations().clear();
-    if (request.getHeaders() != null && !request.getHeaders().isEmpty()) {
+    if (request.getHeaders() != null) {
       List<RouteHeaderConfiguration> headerConfigurations =
           createHeaderConfigurations(request, existingRoute);
       existingRoute.getRouteHeaderConfigurations().addAll(headerConfigurations);
@@ -271,6 +271,10 @@ public class RouteService {
 
   private List<RouteHeaderConfiguration> createHeaderConfigurations(
       RouteRequest request, Route route) {
+    if (request.getHeaders() == null) {
+        return new ArrayList<>();
+    }
+
     return request.getHeaders().stream()
         .map(
             headerConfiguration ->

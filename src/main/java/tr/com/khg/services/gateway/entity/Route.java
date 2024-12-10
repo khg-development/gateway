@@ -58,6 +58,10 @@ public class Route implements Serializable {
   @JoinColumn(name = "api_proxy_id", nullable = false)
   private ApiProxy apiProxy;
 
-  @OneToMany(mappedBy = "route", cascade = CascadeType.ALL)
+  @OneToMany(
+    mappedBy = "route",
+    cascade = CascadeType.ALL,
+    orphanRemoval = true
+  )
   private List<RouteHeaderConfiguration> routeHeaderConfigurations = new ArrayList<>();
 }
