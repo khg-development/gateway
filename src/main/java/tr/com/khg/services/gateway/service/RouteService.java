@@ -25,6 +25,7 @@ import tr.com.khg.services.gateway.entity.RouteHeaderConfiguration;
 import tr.com.khg.services.gateway.entity.enums.FilterType;
 import tr.com.khg.services.gateway.entity.enums.PredicateType;
 import tr.com.khg.services.gateway.exception.DuplicateRouteException;
+import tr.com.khg.services.gateway.model.HeaderConfiguration;
 import tr.com.khg.services.gateway.model.request.RouteRequest;
 import tr.com.khg.services.gateway.model.response.RouteResponse;
 import tr.com.khg.services.gateway.model.response.RoutesResponse;
@@ -107,18 +108,12 @@ public class RouteService {
         .map(this::mapToRouteResponse);
   }
 
+  @Transactional(readOnly = true)
   public Mono<RoutesResponse> getRoutesByProxy(String proxyName) {
     return Mono.fromCallable(
             () ->
                 routeRepository.findByApiProxyNameOrderById(proxyName).stream()
-                    .map(
-                        route ->
-                            RouteResponse.builder()
-                                .routeId(route.getRouteId())
-                                .enabled(route.isEnabled())
-                                .path(route.getPath())
-                                .method(route.getMethod())
-                                .build())
+                    .map(this::mapToRouteResponse)
                     .collect(Collectors.toList()))
         .subscribeOn(Schedulers.boundedElastic())
         .map(routeResponses -> RoutesResponse.builder().routes(routeResponses).build())
@@ -127,19 +122,28 @@ public class RouteService {
                 log.debug("Found {} routes for proxy: {}", response.getRoutes().size(), proxyName));
   }
 
+  @Transactional(readOnly = true)
+  public Mono<RouteResponse> getRoute(String proxyName, String routeId) {
+    return Mono.fromCallable(() -> findRouteByProxyAndRouteId(proxyName, routeId))
+        .map(this::mapToRouteResponse)
+        .subscribeOn(Schedulers.boundedElastic());
+  }
+
   @Transactional
-  public Mono<RouteResponse> updateRoute(String proxyName, String routeId, RouteRequest request) {
+  public Mono<RouteResponse> updateRoute(String proxyName, RouteRequest request) {
     return Mono.fromCallable(
             () -> {
-              Route existingRoute = findRouteByProxyAndRouteId(proxyName, routeId);
-              validateUniqueRoute(proxyName, routeId, request);
+              Route existingRoute = findRouteByProxyAndRouteId(proxyName, request.getRouteId());
+              validateUniqueRoute(proxyName, request.getRouteId(), request);
               updateRouteFromRequest(proxyName, existingRoute, request);
               return routeRepository.save(existingRoute);
             })
         .subscribeOn(Schedulers.boundedElastic())
         .flatMap(this::applyExistingRouteDefinition)
         .map(this::mapToRouteResponse)
-        .doOnError(error -> log.error("Error updating route {}: {}", routeId, error.getMessage()));
+        .doOnError(
+            error ->
+                log.error("Error updating route {}: {}", request.getRouteId(), error.getMessage()));
   }
 
   private Route findRouteByProxyAndRouteId(String proxyName, String routeId) {
@@ -237,9 +241,9 @@ public class RouteService {
   private List<FilterDefinition> createFilterDefinitions(RouteRequest request) {
     List<FilterDefinition> filters = new ArrayList<>();
     if (request.getHeaders() != null && !request.getHeaders().isEmpty()) {
-      Map<FilterType, List<RouteRequest.HeaderConfiguration>> groupedHeaders =
+      Map<FilterType, List<HeaderConfiguration>> groupedHeaders =
           request.getHeaders().stream()
-              .collect(Collectors.groupingBy(RouteRequest.HeaderConfiguration::getType));
+              .collect(Collectors.groupingBy(HeaderConfiguration::getType));
 
       groupedHeaders.forEach(
           (filterType, headerConfigurations) -> {
@@ -284,28 +288,42 @@ public class RouteService {
         .save(Mono.just(route.getRouteDefinition()))
         .then(Mono.fromRunnable(() -> eventPublisher.publishEvent(new RefreshRoutesEvent(this))))
         .thenReturn(route)
-        .doOnError(error -> log.error("Error applying new route definition: {}", error.getMessage()));
+        .doOnError(
+            error -> log.error("Error applying new route definition: {}", error.getMessage()));
   }
 
   private Mono<Route> applyExistingRouteDefinition(Route route) {
     return routeDefinitionWriter
         .delete(Mono.just(route.getRouteId()))
-        .onErrorResume(ex -> {
-          log.warn("Route definition not found for deletion: {}", route.getRouteId());
-          return Mono.empty();
-        })
+        .onErrorResume(
+            ex -> {
+              log.warn("Route definition not found for deletion: {}", route.getRouteId());
+              return Mono.empty();
+            })
         .then(routeDefinitionWriter.save(Mono.just(route.getRouteDefinition())))
         .then(Mono.fromRunnable(() -> eventPublisher.publishEvent(new RefreshRoutesEvent(this))))
         .thenReturn(route)
-        .doOnError(error -> log.error("Error applying existing route definition: {}", error.getMessage()));
+        .doOnError(
+            error -> log.error("Error applying existing route definition: {}", error.getMessage()));
   }
 
   private RouteResponse mapToRouteResponse(Route route) {
+    List<HeaderConfiguration> headerConfigurations = route.getRouteHeaderConfigurations().stream()
+        .map(headerConfig -> {
+            HeaderConfiguration headerConfiguration = new HeaderConfiguration();
+            headerConfiguration.setKey(headerConfig.getKey());
+            headerConfiguration.setValue(headerConfig.getValue());
+            headerConfiguration.setType(headerConfig.getType());
+            return headerConfiguration;
+        })
+        .toList();
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
         .path(route.getPath())
         .method(route.getMethod())
+        .headers(headerConfigurations)
         .build();
   }
 

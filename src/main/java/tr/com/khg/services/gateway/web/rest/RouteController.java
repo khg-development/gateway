@@ -32,12 +32,11 @@ public class RouteController {
     return ResponseEntity.ok(routeService.addRoute(proxyName, routeRequest));
   }
 
-  @PutMapping("/{proxyName}/{routeId}")
+  @PutMapping("/{proxyName}")
   public ResponseEntity<Mono<RouteResponse>> updateRoute(
       @PathVariable String proxyName,
-      @PathVariable String routeId,
       @Valid @RequestBody RouteRequest routeRequest) {
-    return ResponseEntity.ok(routeService.updateRoute(proxyName, routeId, routeRequest));
+    return ResponseEntity.ok(routeService.updateRoute(proxyName, routeRequest));
   }
 
   @DeleteMapping("/{proxyName}/{routeId}")

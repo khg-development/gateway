@@ -4,8 +4,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import lombok.Data;
-import tr.com.khg.services.gateway.entity.enums.FilterType;
 import tr.com.khg.services.gateway.entity.enums.HttpMethods;
+import tr.com.khg.services.gateway.model.HeaderConfiguration;
 
 @Data
 public class RouteRequest {
@@ -19,11 +19,4 @@ public class RouteRequest {
   private HttpMethods method;
 
   private List<HeaderConfiguration> headers;
-
-  @Data
-  public static class HeaderConfiguration {
-    private String key;
-    private String value;
-    private FilterType type;
-  }
 }
