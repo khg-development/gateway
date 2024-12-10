@@ -15,9 +15,6 @@ public class RouteRequest {
   @NotBlank(message = "Path boş olamaz")
   private String path;
 
-  @NotBlank(message = "Servis adı boş olamaz")
-  private String serviceName;
-
   @NotNull(message = "HTTP metodu boş olamaz")
   private HttpMethods method;
 

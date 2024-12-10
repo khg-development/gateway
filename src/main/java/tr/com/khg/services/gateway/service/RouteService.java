@@ -69,182 +69,42 @@ public class RouteService {
   }
 
   @Transactional
-  public Mono<RouteResponse> addRoute(RouteRequest request) {
+  public Mono<RouteResponse> addRoute(String proxyName, RouteRequest request) {
     return Mono.fromCallable(
             () -> {
-              ApiProxy apiProxy =
-                  apiProxyRepository
-                      .findByName(request.getServiceName())
-                      .orElseThrow(
-                          () ->
-                              new RuntimeException(
-                                  "Service not found: " + request.getServiceName()));
-
-              routeRepository
-                  .findByRouteIdAndApiProxy(request.getRouteId(), apiProxy)
-                  .ifPresent(
-                      r -> {
-                        throw new DuplicateRouteException(
-                            "Bu route ID zaten bu proxy için kullanılmaktadır: "
-                                + request.getRouteId());
-                      });
-
-              routeRepository
-                  .findByApiProxyAndPathAndMethod(apiProxy, request.getPath(), request.getMethod())
-                  .ifPresent(
-                      r -> {
-                        throw new DuplicateRouteException(
-                            "Bu path ve HTTP metodu kombinasyonu zaten bu proxy için tanımlanmıştır: "
-                                + request.getPath()
-                                + " - "
-                                + request.getMethod());
-                      });
-
-              RouteDefinition routeDefinition = new RouteDefinition();
-              routeDefinition.setId(request.getRouteId());
-              routeDefinition.setUri(URI.create(apiProxy.getUri()));
-
-              List<PredicateDefinition> predicates = new ArrayList<>();
-              predicates.add(createPredicateDefinition(PATH, request.getPath()));
-              predicates.add(createPredicateDefinition(METHOD, request.getMethod().name()));
-              routeDefinition.setPredicates(predicates);
-
-              List<FilterDefinition> filters = new ArrayList<>();
-              if (request.getHeaders() != null && !request.getHeaders().isEmpty()) {
-                Map<FilterType, List<RouteRequest.HeaderConfiguration>> groupedHeaders =
-                    request.getHeaders().stream()
-                        .collect(Collectors.groupingBy(RouteRequest.HeaderConfiguration::getType));
-
-                groupedHeaders.forEach(
-                    (filterType, headerConfigurations) -> {
-                      switch (filterType) {
-                        case ADD_REQUEST_HEADER:
-                          headerConfigurations.forEach(
-                              header ->
-                                  filters.add(
-                                      createHeaderFilterDefinition(
-                                          ADD_REQUEST_HEADER, header.getKey(), header.getValue())));
-                          break;
-                        case ADD_REQUEST_HEADER_IF_NOT_PRESENT:
-                          String headerArgs =
-                              headerConfigurations.stream()
-                                  .map(header -> header.getKey() + ":" + header.getValue())
-                                  .collect(Collectors.joining(","));
-                          filters.add(
-                              createHeaderFilterDefinition(
-                                  ADD_REQUEST_HEADER_IF_NOT_PRESENT, headerArgs));
-                          break;
-                      }
-                    });
-              }
-              routeDefinition.setFilters(filters);
-
-              Route route =
-                  Route.builder()
-                      .routeId(request.getRouteId())
-                      .routeDefinition(routeDefinition)
-                      .apiProxy(apiProxy)
-                      .path(request.getPath())
-                      .method(request.getMethod())
-                      .enabled(true)
-                      .build();
-
-              if (request.getHeaders() != null && !request.getHeaders().isEmpty()) {
-                List<RouteHeaderConfiguration> routeHeaderConfigurations =
-                    request.getHeaders().stream()
-                        .map(
-                            headerConfiguration ->
-                                RouteHeaderConfiguration.builder()
-                                    .key(headerConfiguration.getKey())
-                                    .value(headerConfiguration.getValue())
-                                    .type(headerConfiguration.getType())
-                                    .route(route)
-                                    .build())
-                        .collect(Collectors.toList());
-                route.setRouteHeaderConfigurations(routeHeaderConfigurations);
-              }
-
+              validateUniqueRoute(proxyName, null, request);
+              Route route = createRouteFromRequest(proxyName, request);
               return routeRepository.save(route);
             })
         .subscribeOn(Schedulers.boundedElastic())
-        .flatMap(
-            route ->
-                routeDefinitionWriter
-                    .save(Mono.just(route.getRouteDefinition()))
-                    .then(
-                        Mono.fromRunnable(
-                            () -> eventPublisher.publishEvent(new RefreshRoutesEvent(this))))
-                    .thenReturn(route))
-        .map(
-            route ->
-                RouteResponse.builder()
-                    .routeId(route.getRouteId())
-                    .enabled(route.isEnabled())
-                    .path(route.getPath())
-                    .method(route.getMethod())
-                    .build());
+        .flatMap(this::applyNewRouteDefinition)
+        .map(this::mapToRouteResponse)
+        .doOnError(error -> log.error("Error adding route: {}", error.getMessage()));
   }
 
   @Transactional
-  public Mono<RouteResponse> deleteRoute(String routeId) {
+  public Mono<RouteResponse> deleteRoute(String proxyName, String routeId) {
     return Mono.fromCallable(
             () -> {
-              Route route =
-                  routeRepository
-                      .findByRouteId(routeId)
-                      .orElseThrow(() -> new RuntimeException("Route not found: " + routeId));
+              Route route = findRouteByProxyAndRouteId(proxyName, routeId);
               return routeRepository.save(route);
             })
         .subscribeOn(Schedulers.boundedElastic())
-        .flatMap(
-            route ->
-                routeDefinitionWriter
-                    .delete(Mono.just(routeId))
-                    .then(
-                        Mono.fromRunnable(
-                            () -> eventPublisher.publishEvent(new RefreshRoutesEvent(this))))
-                    .thenReturn(route))
-        .map(route -> RouteResponse.builder().routeId(route.getRouteId()).build());
+        .flatMap(this::applyExistingRouteDefinition)
+        .map(this::mapToRouteResponse);
   }
 
   @Transactional
-  public Mono<RouteResponse> updateRouteStatus(String routeId, boolean enabled) {
+  public Mono<RouteResponse> updateRouteStatus(String proxyName, String routeId, boolean enabled) {
     return Mono.fromCallable(
             () -> {
-              Route route =
-                  routeRepository
-                      .findByRouteId(routeId)
-                      .orElseThrow(() -> new RuntimeException("Route not found: " + routeId));
+              Route route = findRouteByProxyAndRouteId(proxyName, routeId);
               route.setEnabled(enabled);
               return routeRepository.save(route);
             })
         .subscribeOn(Schedulers.boundedElastic())
-        .flatMap(
-            route -> {
-              if (enabled) {
-                return routeDefinitionWriter
-                    .save(Mono.just(route.getRouteDefinition()))
-                    .then(
-                        Mono.fromRunnable(
-                            () -> eventPublisher.publishEvent(new RefreshRoutesEvent(this))))
-                    .thenReturn(route);
-              } else {
-                return routeDefinitionWriter
-                    .delete(Mono.just(routeId))
-                    .then(
-                        Mono.fromRunnable(
-                            () -> eventPublisher.publishEvent(new RefreshRoutesEvent(this))))
-                    .thenReturn(route);
-              }
-            })
-        .map(
-            route ->
-                RouteResponse.builder()
-                    .routeId(route.getRouteId())
-                    .enabled(route.isEnabled())
-                    .path(route.getPath())
-                    .method(route.getMethod())
-                    .build());
+        .flatMap(this::applyExistingRouteDefinition)
+        .map(this::mapToRouteResponse);
   }
 
   public Mono<RoutesResponse> getRoutesByProxy(String proxyName) {
@@ -265,6 +125,188 @@ public class RouteService {
         .doOnNext(
             response ->
                 log.debug("Found {} routes for proxy: {}", response.getRoutes().size(), proxyName));
+  }
+
+  @Transactional
+  public Mono<RouteResponse> updateRoute(String proxyName, String routeId, RouteRequest request) {
+    return Mono.fromCallable(
+            () -> {
+              Route existingRoute = findRouteByProxyAndRouteId(proxyName, routeId);
+              validateUniqueRoute(proxyName, routeId, request);
+              updateRouteFromRequest(proxyName, existingRoute, request);
+              return routeRepository.save(existingRoute);
+            })
+        .subscribeOn(Schedulers.boundedElastic())
+        .flatMap(this::applyExistingRouteDefinition)
+        .map(this::mapToRouteResponse)
+        .doOnError(error -> log.error("Error updating route {}: {}", routeId, error.getMessage()));
+  }
+
+  private Route findRouteByProxyAndRouteId(String proxyName, String routeId) {
+    return routeRepository
+        .findByApiProxyNameAndRouteId(proxyName, routeId)
+        .orElseThrow(
+            () ->
+                new RuntimeException(
+                    String.format("Route not found: %s for proxy: %s", routeId, proxyName)));
+  }
+
+  private void validateUniqueRoute(String proxyName, String currentRouteId, RouteRequest request) {
+    ApiProxy apiProxy =
+        apiProxyRepository
+            .findByName(proxyName)
+            .orElseThrow(() -> new RuntimeException("Service not found: " + proxyName));
+
+    routeRepository
+        .findByApiProxyAndPathAndMethod(apiProxy, request.getPath(), request.getMethod())
+        .ifPresent(
+            r -> {
+              if (!r.getRouteId().equals(currentRouteId)) {
+                throw new DuplicateRouteException(
+                    "Bu path ve HTTP metodu kombinasyonu zaten bu proxy için tanımlanmıştır: "
+                        + request.getPath()
+                        + " - "
+                        + request.getMethod());
+              }
+            });
+  }
+
+  private Route createRouteFromRequest(String proxyName, RouteRequest request) {
+    ApiProxy apiProxy =
+        apiProxyRepository
+            .findByName(proxyName)
+            .orElseThrow(() -> new RuntimeException("Service not found: " + proxyName));
+
+    Route route =
+        Route.builder()
+            .routeId(request.getRouteId())
+            .apiProxy(apiProxy)
+            .path(request.getPath())
+            .method(request.getMethod())
+            .enabled(true)
+            .build();
+
+    RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
+    route.setRouteDefinition(routeDefinition);
+
+    if (request.getHeaders() != null && !request.getHeaders().isEmpty()) {
+      List<RouteHeaderConfiguration> headerConfigurations =
+          createHeaderConfigurations(request, route);
+      route.setRouteHeaderConfigurations(headerConfigurations);
+    }
+
+    return route;
+  }
+
+  private void updateRouteFromRequest(String proxyName, Route existingRoute, RouteRequest request) {
+    ApiProxy apiProxy =
+        apiProxyRepository
+            .findByName(proxyName)
+            .orElseThrow(() -> new RuntimeException("Service not found: " + proxyName));
+
+    RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
+    existingRoute.setRouteDefinition(routeDefinition);
+    existingRoute.setApiProxy(apiProxy);
+    existingRoute.setPath(request.getPath());
+    existingRoute.setMethod(request.getMethod());
+
+    existingRoute.getRouteHeaderConfigurations().clear();
+    if (request.getHeaders() != null && !request.getHeaders().isEmpty()) {
+      List<RouteHeaderConfiguration> headerConfigurations =
+          createHeaderConfigurations(request, existingRoute);
+      existingRoute.getRouteHeaderConfigurations().addAll(headerConfigurations);
+    }
+  }
+
+  private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
+    RouteDefinition routeDefinition = new RouteDefinition();
+    routeDefinition.setId(request.getRouteId());
+    routeDefinition.setUri(URI.create(apiProxy.getUri()));
+
+    List<PredicateDefinition> predicates = new ArrayList<>();
+    predicates.add(createPredicateDefinition(PATH, request.getPath()));
+    predicates.add(createPredicateDefinition(METHOD, request.getMethod().name()));
+    routeDefinition.setPredicates(predicates);
+
+    List<FilterDefinition> filters = createFilterDefinitions(request);
+    routeDefinition.setFilters(filters);
+
+    return routeDefinition;
+  }
+
+  private List<FilterDefinition> createFilterDefinitions(RouteRequest request) {
+    List<FilterDefinition> filters = new ArrayList<>();
+    if (request.getHeaders() != null && !request.getHeaders().isEmpty()) {
+      Map<FilterType, List<RouteRequest.HeaderConfiguration>> groupedHeaders =
+          request.getHeaders().stream()
+              .collect(Collectors.groupingBy(RouteRequest.HeaderConfiguration::getType));
+
+      groupedHeaders.forEach(
+          (filterType, headerConfigurations) -> {
+            switch (filterType) {
+              case ADD_REQUEST_HEADER:
+                headerConfigurations.forEach(
+                    header ->
+                        filters.add(
+                            createHeaderFilterDefinition(
+                                ADD_REQUEST_HEADER, header.getKey(), header.getValue())));
+                break;
+              case ADD_REQUEST_HEADER_IF_NOT_PRESENT:
+                String headerArgs =
+                    headerConfigurations.stream()
+                        .map(header -> header.getKey() + ":" + header.getValue())
+                        .collect(Collectors.joining(","));
+                filters.add(
+                    createHeaderFilterDefinition(ADD_REQUEST_HEADER_IF_NOT_PRESENT, headerArgs));
+                break;
+            }
+          });
+    }
+    return filters;
+  }
+
+  private List<RouteHeaderConfiguration> createHeaderConfigurations(
+      RouteRequest request, Route route) {
+    return request.getHeaders().stream()
+        .map(
+            headerConfiguration ->
+                RouteHeaderConfiguration.builder()
+                    .key(headerConfiguration.getKey())
+                    .value(headerConfiguration.getValue())
+                    .type(headerConfiguration.getType())
+                    .route(route)
+                    .build())
+        .toList();
+  }
+
+  private Mono<Route> applyNewRouteDefinition(Route route) {
+    return routeDefinitionWriter
+        .save(Mono.just(route.getRouteDefinition()))
+        .then(Mono.fromRunnable(() -> eventPublisher.publishEvent(new RefreshRoutesEvent(this))))
+        .thenReturn(route)
+        .doOnError(error -> log.error("Error applying new route definition: {}", error.getMessage()));
+  }
+
+  private Mono<Route> applyExistingRouteDefinition(Route route) {
+    return routeDefinitionWriter
+        .delete(Mono.just(route.getRouteId()))
+        .onErrorResume(ex -> {
+          log.warn("Route definition not found for deletion: {}", route.getRouteId());
+          return Mono.empty();
+        })
+        .then(routeDefinitionWriter.save(Mono.just(route.getRouteDefinition())))
+        .then(Mono.fromRunnable(() -> eventPublisher.publishEvent(new RefreshRoutesEvent(this))))
+        .thenReturn(route)
+        .doOnError(error -> log.error("Error applying existing route definition: {}", error.getMessage()));
+  }
+
+  private RouteResponse mapToRouteResponse(Route route) {
+    return RouteResponse.builder()
+        .routeId(route.getRouteId())
+        .enabled(route.isEnabled())
+        .path(route.getPath())
+        .method(route.getMethod())
+        .build();
   }
 
   private PredicateDefinition createPredicateDefinition(

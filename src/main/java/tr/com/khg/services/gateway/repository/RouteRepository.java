@@ -14,8 +14,8 @@ public interface RouteRepository extends JpaRepository<Route, Long> {
 
   List<Route> findByApiProxyNameOrderById(String proxyName);
 
-  Optional<Route> findByRouteIdAndApiProxy(String routeId, ApiProxy apiProxy);
-
   Optional<Route> findByApiProxyAndPathAndMethod(
       ApiProxy apiProxy, String path, HttpMethods method);
+
+  Optional<Route> findByApiProxyNameAndRouteId(String proxyName, String routeId);
 }

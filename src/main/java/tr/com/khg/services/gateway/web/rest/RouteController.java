@@ -25,19 +25,33 @@ public class RouteController {
     return ResponseEntity.ok(routeService.getRoutesByProxy(proxyName));
   }
 
-  @PostMapping
-  public ResponseEntity<Mono<RouteResponse>> addRoute(@Valid @RequestBody RouteRequest routeRequest) {
-    return ResponseEntity.ok(routeService.addRoute(routeRequest));
+  @PostMapping("/{proxyName}")
+  public ResponseEntity<Mono<RouteResponse>> addRoute(
+      @PathVariable String proxyName,
+      @Valid @RequestBody RouteRequest routeRequest) {
+    return ResponseEntity.ok(routeService.addRoute(proxyName, routeRequest));
   }
 
-  @DeleteMapping("/{routeId}")
-  public ResponseEntity<Mono<RouteResponse>> deleteRoute(@PathVariable String routeId) {
-    return ResponseEntity.ok(routeService.deleteRoute(routeId));
+  @PutMapping("/{proxyName}/{routeId}")
+  public ResponseEntity<Mono<RouteResponse>> updateRoute(
+      @PathVariable String proxyName,
+      @PathVariable String routeId,
+      @Valid @RequestBody RouteRequest routeRequest) {
+    return ResponseEntity.ok(routeService.updateRoute(proxyName, routeId, routeRequest));
   }
 
-  @PostMapping("/{routeId}/status")
+  @DeleteMapping("/{proxyName}/{routeId}")
+  public ResponseEntity<Mono<RouteResponse>> deleteRoute(
+      @PathVariable String proxyName,
+      @PathVariable String routeId) {
+    return ResponseEntity.ok(routeService.deleteRoute(proxyName, routeId));
+  }
+
+  @PostMapping("/{proxyName}/{routeId}/status")
   public ResponseEntity<Mono<RouteResponse>> updateRouteStatus(
-      @PathVariable String routeId, @Valid @RequestBody RouteStatusRequest request) {
-    return ResponseEntity.ok(routeService.updateRouteStatus(routeId, request.getEnabled()));
+      @PathVariable String proxyName,
+      @PathVariable String routeId,
+      @Valid @RequestBody RouteStatusRequest request) {
+    return ResponseEntity.ok(routeService.updateRouteStatus(proxyName, routeId, request.getEnabled()));
   }
 }
