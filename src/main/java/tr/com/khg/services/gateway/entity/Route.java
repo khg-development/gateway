@@ -47,10 +47,6 @@ public class Route implements Serializable {
   @Column(name = "enabled", nullable = false)
   private boolean enabled = true;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "api_proxy_id", nullable = false)
-  private ApiProxy apiProxy;
-
   @Column(name = "path", nullable = false)
   private String path;
 
@@ -58,6 +54,10 @@ public class Route implements Serializable {
   @Column(name = "method", nullable = false)
   private HttpMethods method;
 
-  @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, orphanRemoval = true)
-  private List<Header> headers = new ArrayList<>();
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "api_proxy_id", nullable = false)
+  private ApiProxy apiProxy;
+
+  @OneToMany(mappedBy = "route", cascade = CascadeType.ALL)
+  private List<RouteHeaderConfiguration> routeHeaderConfigurations = new ArrayList<>();
 }

@@ -1,11 +1,11 @@
 package tr.com.khg.services.gateway.service;
 
+import static tr.com.khg.services.gateway.entity.enums.FilterType.*;
+import static tr.com.khg.services.gateway.entity.enums.PredicateType.*;
+
 import jakarta.annotation.PostConstruct;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,9 +20,10 @@ import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import tr.com.khg.services.gateway.entity.ApiProxy;
-import tr.com.khg.services.gateway.entity.Header;
 import tr.com.khg.services.gateway.entity.Route;
-import tr.com.khg.services.gateway.entity.enums.HeaderType;
+import tr.com.khg.services.gateway.entity.RouteHeaderConfiguration;
+import tr.com.khg.services.gateway.entity.enums.FilterType;
+import tr.com.khg.services.gateway.entity.enums.PredicateType;
 import tr.com.khg.services.gateway.exception.DuplicateRouteException;
 import tr.com.khg.services.gateway.model.request.RouteRequest;
 import tr.com.khg.services.gateway.model.response.RouteResponse;
@@ -103,55 +104,38 @@ public class RouteService {
               routeDefinition.setId(request.getRouteId());
               routeDefinition.setUri(URI.create(apiProxy.getUri()));
 
-              PredicateDefinition pathPredicate = new PredicateDefinition();
-              pathPredicate.setName("Path");
-              pathPredicate.addArg("pattern", request.getPath());
-
-              PredicateDefinition methodPredicate = new PredicateDefinition();
-              methodPredicate.setName("Method");
-              methodPredicate.addArg("method", request.getMethod().name());
-
               List<PredicateDefinition> predicates = new ArrayList<>();
-              predicates.add(pathPredicate);
-              predicates.add(methodPredicate);
+              predicates.add(createPredicateDefinition(PATH, request.getPath()));
+              predicates.add(createPredicateDefinition(METHOD, request.getMethod().name()));
               routeDefinition.setPredicates(predicates);
 
               List<FilterDefinition> filters = new ArrayList<>();
               if (request.getHeaders() != null && !request.getHeaders().isEmpty()) {
-                Map<HeaderType, List<RouteRequest.HeaderRequest>> groupedHeaders =
+                Map<FilterType, List<RouteRequest.HeaderConfiguration>> groupedHeaders =
                     request.getHeaders().stream()
-                        .collect(Collectors.groupingBy(RouteRequest.HeaderRequest::getType));
+                        .collect(Collectors.groupingBy(RouteRequest.HeaderConfiguration::getType));
 
-                if (groupedHeaders.containsKey(HeaderType.ADD_REQUEST_HEADER)) {
-                  groupedHeaders
-                      .get(HeaderType.ADD_REQUEST_HEADER)
-                      .forEach(
-                          header -> {
-                            FilterDefinition headerFilter = new FilterDefinition();
-                            headerFilter.setName(HeaderType.ADD_REQUEST_HEADER.getFilterName());
-                            Map<String, String> args = new HashMap<>();
-                            args.put("_genkey_0", header.getKey());
-                            args.put("_genkey_1", header.getValue());
-                            headerFilter.setArgs(args);
-                            filters.add(headerFilter);
-                          });
-                }
-
-                if (groupedHeaders.containsKey(HeaderType.ADD_REQUEST_HEADER_IF_NOT_PRESENT)) {
-                  FilterDefinition headerFilter = new FilterDefinition();
-                  headerFilter.setName(
-                      HeaderType.ADD_REQUEST_HEADER_IF_NOT_PRESENT.getFilterName());
-
-                  String headerArgs =
-                      groupedHeaders.get(HeaderType.ADD_REQUEST_HEADER_IF_NOT_PRESENT).stream()
-                          .map(header -> header.getKey() + ":" + header.getValue())
-                          .collect(Collectors.joining(","));
-
-                  Map<String, String> args = new HashMap<>();
-                  args.put("_genkey_0", headerArgs);
-                  headerFilter.setArgs(args);
-                  filters.add(headerFilter);
-                }
+                groupedHeaders.forEach(
+                    (filterType, headerConfigurations) -> {
+                      switch (filterType) {
+                        case ADD_REQUEST_HEADER:
+                          headerConfigurations.forEach(
+                              header ->
+                                  filters.add(
+                                      createHeaderFilterDefinition(
+                                          ADD_REQUEST_HEADER, header.getKey(), header.getValue())));
+                          break;
+                        case ADD_REQUEST_HEADER_IF_NOT_PRESENT:
+                          String headerArgs =
+                              headerConfigurations.stream()
+                                  .map(header -> header.getKey() + ":" + header.getValue())
+                                  .collect(Collectors.joining(","));
+                          filters.add(
+                              createHeaderFilterDefinition(
+                                  ADD_REQUEST_HEADER_IF_NOT_PRESENT, headerArgs));
+                          break;
+                      }
+                    });
               }
               routeDefinition.setFilters(filters);
 
@@ -166,18 +150,18 @@ public class RouteService {
                       .build();
 
               if (request.getHeaders() != null && !request.getHeaders().isEmpty()) {
-                List<Header> headers =
+                List<RouteHeaderConfiguration> routeHeaderConfigurations =
                     request.getHeaders().stream()
                         .map(
-                            headerRequest ->
-                                Header.builder()
-                                    .key(headerRequest.getKey())
-                                    .value(headerRequest.getValue())
-                                    .type(headerRequest.getType())
+                            headerConfiguration ->
+                                RouteHeaderConfiguration.builder()
+                                    .key(headerConfiguration.getKey())
+                                    .value(headerConfiguration.getValue())
+                                    .type(headerConfiguration.getType())
                                     .route(route)
                                     .build())
                         .collect(Collectors.toList());
-                route.setHeaders(headers);
+                route.setRouteHeaderConfigurations(routeHeaderConfigurations);
               }
 
               return routeRepository.save(route);
@@ -281,5 +265,24 @@ public class RouteService {
         .doOnNext(
             response ->
                 log.debug("Found {} routes for proxy: {}", response.getRoutes().size(), proxyName));
+  }
+
+  private PredicateDefinition createPredicateDefinition(
+      PredicateType predicateType, String argValue) {
+    PredicateDefinition methodPredicate = new PredicateDefinition();
+    methodPredicate.setName(predicateType.getType());
+    methodPredicate.addArg(predicateType.getArg(), argValue);
+    return methodPredicate;
+  }
+
+  private FilterDefinition createHeaderFilterDefinition(FilterType filterType, String... args) {
+    FilterDefinition headerFilter = new FilterDefinition();
+    headerFilter.setName(filterType.getFilterName());
+    Map<String, String> arguments = new HashMap<>();
+    for (int i = 0; i < args.length; i++) {
+      arguments.put("_genkey_" + i, args[i]);
+    }
+    headerFilter.setArgs(arguments);
+    return headerFilter;
   }
 }
