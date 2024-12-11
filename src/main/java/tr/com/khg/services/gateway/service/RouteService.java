@@ -21,11 +21,13 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import tr.com.khg.services.gateway.entity.ApiProxy;
 import tr.com.khg.services.gateway.entity.Route;
+import tr.com.khg.services.gateway.entity.RouteCookieConfiguration;
 import tr.com.khg.services.gateway.entity.RouteHeaderConfiguration;
 import tr.com.khg.services.gateway.entity.enums.FilterType;
 import tr.com.khg.services.gateway.exception.DuplicateRouteException;
 import tr.com.khg.services.gateway.model.HeaderConfiguration;
 import tr.com.khg.services.gateway.model.request.RouteRequest;
+import tr.com.khg.services.gateway.model.response.CookieResponse;
 import tr.com.khg.services.gateway.model.response.RouteResponse;
 import tr.com.khg.services.gateway.model.response.RoutesResponse;
 import tr.com.khg.services.gateway.repository.ApiProxyRepository;
@@ -191,6 +193,8 @@ public class RouteService {
             .enabled(true)
             .activationTime(request.getActivationTime())
             .expirationTime(request.getExpirationTime())
+            .routeCookieConfigurations(new ArrayList<>())
+            .routeHeaderConfigurations(new ArrayList<>())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -200,6 +204,12 @@ public class RouteService {
       List<RouteHeaderConfiguration> headerConfigurations =
           createHeaderConfigurations(request, route);
       route.setRouteHeaderConfigurations(headerConfigurations);
+    }
+
+    if (request.getCookies() != null && !request.getCookies().isEmpty()) {
+      List<RouteCookieConfiguration> cookieConfigurations =
+          createCookieConfigurations(request, route);
+      route.setRouteCookieConfigurations(cookieConfigurations);
     }
 
     return route;
@@ -225,6 +235,13 @@ public class RouteService {
           createHeaderConfigurations(request, existingRoute);
       existingRoute.getRouteHeaderConfigurations().addAll(headerConfigurations);
     }
+
+    existingRoute.getRouteCookieConfigurations().clear();
+    if (request.getCookies() != null && !request.getCookies().isEmpty()) {
+      List<RouteCookieConfiguration> cookieConfigurations =
+          createCookieConfigurations(request, existingRoute);
+      existingRoute.getRouteCookieConfigurations().addAll(cookieConfigurations);
+    }
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -247,6 +264,16 @@ public class RouteService {
     if (request.getExpirationTime() != null && request.getActivationTime() == null) {
       predicates.add(
           definitionUtils.createPredicateDefinition(BEFORE, request.getExpirationTime()));
+    }
+
+    if (request.getCookies() != null && !request.getCookies().isEmpty()) {
+      request
+          .getCookies()
+          .forEach(
+              cookie ->
+                  predicates.add(
+                      definitionUtils.createPredicateDefinition(
+                          COOKIE, cookie.getName(), cookie.getRegexp())));
     }
 
     routeDefinition.setPredicates(predicates);
@@ -305,6 +332,23 @@ public class RouteService {
         .toList();
   }
 
+  private List<RouteCookieConfiguration> createCookieConfigurations(
+      RouteRequest request, Route route) {
+    if (request.getCookies() == null) {
+      return new ArrayList<>();
+    }
+
+    return request.getCookies().stream()
+        .map(
+            cookieConfig ->
+                RouteCookieConfiguration.builder()
+                    .name(cookieConfig.getName())
+                    .regexp(cookieConfig.getRegexp())
+                    .route(route)
+                    .build())
+        .toList();
+  }
+
   private Mono<Route> applyNewRouteDefinition(Route route) {
     return routeDefinitionWriter
         .save(Mono.just(route.getRouteDefinition()))
@@ -331,7 +375,6 @@ public class RouteService {
 
   private RouteResponse mapToRouteResponse(Route route) {
     List<HeaderConfiguration> headerConfigurations = new ArrayList<>();
-
     if (route.getRouteHeaderConfigurations() != null) {
       headerConfigurations =
           route.getRouteHeaderConfigurations().stream()
@@ -346,6 +389,19 @@ public class RouteService {
               .toList();
     }
 
+    List<CookieResponse> cookieResponses = new ArrayList<>();
+    if (route.getRouteCookieConfigurations() != null) {
+      cookieResponses =
+          route.getRouteCookieConfigurations().stream()
+              .map(
+                  cookieConfig ->
+                      CookieResponse.builder()
+                          .name(cookieConfig.getName())
+                          .regexp(cookieConfig.getRegexp())
+                          .build())
+              .toList();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -354,6 +410,7 @@ public class RouteService {
         .headers(headerConfigurations)
         .activationTime(route.getActivationTime())
         .expirationTime(route.getExpirationTime())
+        .cookies(cookieResponses)
         .build();
   }
 }

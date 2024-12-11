@@ -1,6 +1,5 @@
 package tr.com.khg.services.gateway.model.response;
 
-import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -22,4 +21,5 @@ public class RouteResponse {
   private List<HeaderConfiguration> headers;
   private ZonedDateTime activationTime;
   private ZonedDateTime expirationTime;
+  private List<CookieResponse> cookies;
 }

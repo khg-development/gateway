@@ -8,7 +8,8 @@ public enum PredicateType {
   METHOD("Method", "method"),
   AFTER("After", "datetime"),
   BEFORE("Before", "datetime"),
-  BETWEEN("Between", "datetime1", "datetime2");
+  BETWEEN("Between", "datetime1", "datetime2"),
+  COOKIE("Cookie", "name", "regexp");
 
   private final String type;
   private final String[] arg;

@@ -59,16 +59,15 @@ public class Route implements Serializable {
   @JoinColumn(name = "api_proxy_id", nullable = false)
   private ApiProxy apiProxy;
 
-  @OneToMany(
-    mappedBy = "route",
-    cascade = CascadeType.ALL,
-    orphanRemoval = true
-  )
-  private List<RouteHeaderConfiguration> routeHeaderConfigurations = new ArrayList<>();
-
   @Column(name = "activation_time")
   private ZonedDateTime activationTime;
 
   @Column(name = "expiration_time")
   private ZonedDateTime expirationTime;
+
+  @OneToMany(mappedBy = "route", cascade = CascadeType.ALL)
+  private List<RouteHeaderConfiguration> routeHeaderConfigurations = new ArrayList<>();
+
+  @OneToMany(mappedBy = "route", cascade = CascadeType.ALL)
+  private List<RouteCookieConfiguration> routeCookieConfigurations = new ArrayList<>();
 }

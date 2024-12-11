@@ -28,4 +28,6 @@ public class RouteRequest {
 
   @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
   private ZonedDateTime expirationTime;
+
+  private List<CookieConfiguration> cookies;
 }
