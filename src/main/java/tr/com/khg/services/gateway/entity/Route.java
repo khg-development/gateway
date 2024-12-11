@@ -3,6 +3,7 @@ package tr.com.khg.services.gateway.entity;
 import jakarta.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.*;
@@ -64,4 +65,10 @@ public class Route implements Serializable {
     orphanRemoval = true
   )
   private List<RouteHeaderConfiguration> routeHeaderConfigurations = new ArrayList<>();
+
+  @Column(name = "activation_time")
+  private ZonedDateTime activationTime;
+
+  @Column(name = "expiration_time")
+  private ZonedDateTime expirationTime;
 }

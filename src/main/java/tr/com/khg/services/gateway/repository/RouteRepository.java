@@ -11,7 +11,12 @@ import tr.com.khg.services.gateway.entity.enums.HttpMethods;
 
 public interface RouteRepository extends JpaRepository<Route, Long> {
   @Query(
-      "SELECT DISTINCT r FROM Route r LEFT JOIN FETCH r.routeHeaderConfigurations WHERE r.apiProxy.name = :proxyName ORDER BY r.id")
+      """
+      SELECT DISTINCT r FROM Route r
+      LEFT JOIN FETCH r.routeHeaderConfigurations
+      WHERE r.apiProxy.name = :proxyName
+      ORDER BY r.id
+      """)
   List<Route> findByApiProxyNameOrderById(@Param("proxyName") String proxyName);
 
   Optional<Route> findByApiProxyAndPathAndMethod(

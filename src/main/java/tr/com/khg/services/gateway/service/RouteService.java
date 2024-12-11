@@ -23,7 +23,6 @@ import tr.com.khg.services.gateway.entity.ApiProxy;
 import tr.com.khg.services.gateway.entity.Route;
 import tr.com.khg.services.gateway.entity.RouteHeaderConfiguration;
 import tr.com.khg.services.gateway.entity.enums.FilterType;
-import tr.com.khg.services.gateway.entity.enums.PredicateType;
 import tr.com.khg.services.gateway.exception.DuplicateRouteException;
 import tr.com.khg.services.gateway.model.HeaderConfiguration;
 import tr.com.khg.services.gateway.model.request.RouteRequest;
@@ -31,6 +30,7 @@ import tr.com.khg.services.gateway.model.response.RouteResponse;
 import tr.com.khg.services.gateway.model.response.RoutesResponse;
 import tr.com.khg.services.gateway.repository.ApiProxyRepository;
 import tr.com.khg.services.gateway.repository.RouteRepository;
+import tr.com.khg.services.gateway.utils.DefinitionUtils;
 
 @Slf4j
 @Service
@@ -38,6 +38,7 @@ import tr.com.khg.services.gateway.repository.RouteRepository;
 public class RouteService {
 
   private final RouteRepository routeRepository;
+  private final DefinitionUtils definitionUtils;
   private final ApiProxyRepository apiProxyRepository;
   private final ApplicationEventPublisher eventPublisher;
   private final RouteDefinitionWriter routeDefinitionWriter;
@@ -188,6 +189,8 @@ public class RouteService {
             .path(request.getPath())
             .method(request.getMethod())
             .enabled(true)
+            .activationTime(request.getActivationTime())
+            .expirationTime(request.getExpirationTime())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -213,6 +216,8 @@ public class RouteService {
     existingRoute.setApiProxy(apiProxy);
     existingRoute.setPath(request.getPath());
     existingRoute.setMethod(request.getMethod());
+    existingRoute.setActivationTime(request.getActivationTime());
+    existingRoute.setExpirationTime(request.getExpirationTime());
 
     existingRoute.getRouteHeaderConfigurations().clear();
     if (request.getHeaders() != null) {
@@ -228,13 +233,25 @@ public class RouteService {
     routeDefinition.setUri(URI.create(apiProxy.getUri()));
 
     List<PredicateDefinition> predicates = new ArrayList<>();
-    predicates.add(createPredicateDefinition(PATH, request.getPath()));
-    predicates.add(createPredicateDefinition(METHOD, request.getMethod().name()));
-    routeDefinition.setPredicates(predicates);
+    predicates.add(definitionUtils.createPredicateDefinition(PATH, request.getPath()));
+    predicates.add(definitionUtils.createPredicateDefinition(METHOD, request.getMethod().name()));
 
+    if (request.getActivationTime() != null && request.getExpirationTime() != null) {
+      predicates.add(
+          definitionUtils.createPredicateDefinition(
+              BETWEEN, request.getActivationTime(), request.getExpirationTime()));
+    }
+    if (request.getActivationTime() != null && request.getExpirationTime() == null) {
+      predicates.add(definitionUtils.createPredicateDefinition(AFTER, request.getActivationTime()));
+    }
+    if (request.getExpirationTime() != null && request.getActivationTime() == null) {
+      predicates.add(
+          definitionUtils.createPredicateDefinition(BEFORE, request.getExpirationTime()));
+    }
+
+    routeDefinition.setPredicates(predicates);
     List<FilterDefinition> filters = createFilterDefinitions(request);
     routeDefinition.setFilters(filters);
-
     return routeDefinition;
   }
 
@@ -252,7 +269,7 @@ public class RouteService {
                 headerConfigurations.forEach(
                     header ->
                         filters.add(
-                            createHeaderFilterDefinition(
+                            definitionUtils.createHeaderFilterDefinition(
                                 ADD_REQUEST_HEADER, header.getKey(), header.getValue())));
                 break;
               case ADD_REQUEST_HEADER_IF_NOT_PRESENT:
@@ -261,7 +278,8 @@ public class RouteService {
                         .map(header -> header.getKey() + ":" + header.getValue())
                         .collect(Collectors.joining(","));
                 filters.add(
-                    createHeaderFilterDefinition(ADD_REQUEST_HEADER_IF_NOT_PRESENT, headerArgs));
+                    definitionUtils.createHeaderFilterDefinition(
+                        ADD_REQUEST_HEADER_IF_NOT_PRESENT, headerArgs));
                 break;
             }
           });
@@ -272,7 +290,7 @@ public class RouteService {
   private List<RouteHeaderConfiguration> createHeaderConfigurations(
       RouteRequest request, Route route) {
     if (request.getHeaders() == null) {
-        return new ArrayList<>();
+      return new ArrayList<>();
     }
 
     return request.getHeaders().stream()
@@ -312,15 +330,21 @@ public class RouteService {
   }
 
   private RouteResponse mapToRouteResponse(Route route) {
-    List<HeaderConfiguration> headerConfigurations = route.getRouteHeaderConfigurations().stream()
-        .map(headerConfig -> {
-            HeaderConfiguration headerConfiguration = new HeaderConfiguration();
-            headerConfiguration.setKey(headerConfig.getKey());
-            headerConfiguration.setValue(headerConfig.getValue());
-            headerConfiguration.setType(headerConfig.getType());
-            return headerConfiguration;
-        })
-        .toList();
+    List<HeaderConfiguration> headerConfigurations = new ArrayList<>();
+
+    if (route.getRouteHeaderConfigurations() != null) {
+      headerConfigurations =
+          route.getRouteHeaderConfigurations().stream()
+              .map(
+                  headerConfig -> {
+                    HeaderConfiguration headerConfiguration = new HeaderConfiguration();
+                    headerConfiguration.setKey(headerConfig.getKey());
+                    headerConfiguration.setValue(headerConfig.getValue());
+                    headerConfiguration.setType(headerConfig.getType());
+                    return headerConfiguration;
+                  })
+              .toList();
+    }
 
     return RouteResponse.builder()
         .routeId(route.getRouteId())
@@ -328,25 +352,8 @@ public class RouteService {
         .path(route.getPath())
         .method(route.getMethod())
         .headers(headerConfigurations)
+        .activationTime(route.getActivationTime())
+        .expirationTime(route.getExpirationTime())
         .build();
-  }
-
-  private PredicateDefinition createPredicateDefinition(
-      PredicateType predicateType, String argValue) {
-    PredicateDefinition methodPredicate = new PredicateDefinition();
-    methodPredicate.setName(predicateType.getType());
-    methodPredicate.addArg(predicateType.getArg(), argValue);
-    return methodPredicate;
-  }
-
-  private FilterDefinition createHeaderFilterDefinition(FilterType filterType, String... args) {
-    FilterDefinition headerFilter = new FilterDefinition();
-    headerFilter.setName(filterType.getFilterName());
-    Map<String, String> arguments = new HashMap<>();
-    for (int i = 0; i < args.length; i++) {
-      arguments.put("_genkey_" + i, args[i]);
-    }
-    headerFilter.setArgs(arguments);
-    return headerFilter;
   }
 }
