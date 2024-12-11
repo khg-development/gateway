@@ -31,6 +31,8 @@ import tr.com.khg.services.gateway.model.response.CookieResponse;
 import tr.com.khg.services.gateway.model.response.RouteResponse;
 import tr.com.khg.services.gateway.model.response.RoutesResponse;
 import tr.com.khg.services.gateway.repository.ApiProxyRepository;
+import tr.com.khg.services.gateway.repository.RouteCookieConfigurationRepository;
+import tr.com.khg.services.gateway.repository.RouteHeaderConfigurationRepository;
 import tr.com.khg.services.gateway.repository.RouteRepository;
 import tr.com.khg.services.gateway.utils.DefinitionUtils;
 
@@ -44,6 +46,8 @@ public class RouteService {
   private final ApiProxyRepository apiProxyRepository;
   private final ApplicationEventPublisher eventPublisher;
   private final RouteDefinitionWriter routeDefinitionWriter;
+  private final RouteHeaderConfigurationRepository headerRepository;
+  private final RouteCookieConfigurationRepository cookieRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -136,10 +140,10 @@ public class RouteService {
   public Mono<RouteResponse> updateRoute(String proxyName, RouteRequest request) {
     return Mono.fromCallable(
             () -> {
-              Route existingRoute = findRouteByProxyAndRouteId(proxyName, request.getRouteId());
-              validateUniqueRoute(proxyName, request.getRouteId(), request);
-              updateRouteFromRequest(proxyName, existingRoute, request);
-              return routeRepository.save(existingRoute);
+                Route existingRoute = findRouteByProxyAndRouteId(proxyName, request.getRouteId());
+                validateUniqueRoute(proxyName, request.getRouteId(), request);
+                updateRouteFromRequest(proxyName, existingRoute, request);
+                return routeRepository.save(existingRoute);
             })
         .subscribeOn(Schedulers.boundedElastic())
         .flatMap(this::applyExistingRouteDefinition)
@@ -229,19 +233,12 @@ public class RouteService {
     existingRoute.setActivationTime(request.getActivationTime());
     existingRoute.setExpirationTime(request.getExpirationTime());
 
-    existingRoute.getRouteHeaderConfigurations().clear();
-    if (request.getHeaders() != null) {
-      List<RouteHeaderConfiguration> headerConfigurations =
-          createHeaderConfigurations(request, existingRoute);
-      existingRoute.getRouteHeaderConfigurations().addAll(headerConfigurations);
-    }
+    // İlişkili kayıtları sil ve yenilerini ekle
+    headerRepository.deleteByRoute(existingRoute);
+    cookieRepository.deleteByRoute(existingRoute);
 
-    existingRoute.getRouteCookieConfigurations().clear();
-    if (request.getCookies() != null && !request.getCookies().isEmpty()) {
-      List<RouteCookieConfiguration> cookieConfigurations =
-          createCookieConfigurations(request, existingRoute);
-      existingRoute.getRouteCookieConfigurations().addAll(cookieConfigurations);
-    }
+    existingRoute.setRouteHeaderConfigurations(createHeaderConfigurations(request, existingRoute));
+    existingRoute.setRouteCookieConfigurations(createCookieConfigurations(request, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {

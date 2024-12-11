@@ -65,9 +65,9 @@ public class Route implements Serializable {
   @Column(name = "expiration_time")
   private ZonedDateTime expirationTime;
 
-  @OneToMany(mappedBy = "route", cascade = CascadeType.ALL)
+  @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
   private List<RouteHeaderConfiguration> routeHeaderConfigurations = new ArrayList<>();
 
-  @OneToMany(mappedBy = "route", cascade = CascadeType.ALL)
+  @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
   private List<RouteCookieConfiguration> routeCookieConfigurations = new ArrayList<>();
 }
