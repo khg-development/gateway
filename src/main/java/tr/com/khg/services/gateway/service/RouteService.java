@@ -23,16 +23,19 @@ import tr.com.khg.services.gateway.entity.ApiProxy;
 import tr.com.khg.services.gateway.entity.Route;
 import tr.com.khg.services.gateway.entity.RouteCookiePredication;
 import tr.com.khg.services.gateway.entity.RouteHeaderConfiguration;
+import tr.com.khg.services.gateway.entity.RouteHeaderPredication;
 import tr.com.khg.services.gateway.entity.enums.FilterType;
 import tr.com.khg.services.gateway.exception.DuplicateRouteException;
 import tr.com.khg.services.gateway.model.HeaderConfiguration;
 import tr.com.khg.services.gateway.model.request.RouteRequest;
 import tr.com.khg.services.gateway.model.response.CookiePredicationResponse;
+import tr.com.khg.services.gateway.model.response.HeaderPredicationResponse;
 import tr.com.khg.services.gateway.model.response.RouteResponse;
 import tr.com.khg.services.gateway.model.response.RoutesResponse;
 import tr.com.khg.services.gateway.repository.ApiProxyRepository;
 import tr.com.khg.services.gateway.repository.RouteCookiePredicationRepository;
 import tr.com.khg.services.gateway.repository.RouteHeaderConfigurationRepository;
+import tr.com.khg.services.gateway.repository.RouteHeaderPredicationRepository;
 import tr.com.khg.services.gateway.repository.RouteRepository;
 import tr.com.khg.services.gateway.utils.DefinitionUtils;
 
@@ -48,6 +51,7 @@ public class RouteService {
   private final RouteDefinitionWriter routeDefinitionWriter;
   private final RouteHeaderConfigurationRepository headerRepository;
   private final RouteCookiePredicationRepository cookieRepository;
+  private final RouteHeaderPredicationRepository headerPredicationRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -199,6 +203,7 @@ public class RouteService {
             .expirationTime(request.getExpirationTime())
             .routeCookiePredications(new ArrayList<>())
             .routeHeaderConfigurations(new ArrayList<>())
+            .routeHeaderPredications(new ArrayList<>())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -213,6 +218,11 @@ public class RouteService {
     if (request.getCookiePredications() != null && !request.getCookiePredications().isEmpty()) {
       List<RouteCookiePredication> cookiePredications = createCookiePredications(request, route);
       route.setRouteCookiePredications(cookiePredications);
+    }
+
+    if (request.getHeaderPredications() != null && !request.getHeaderPredications().isEmpty()) {
+      List<RouteHeaderPredication> headerPredications = createHeaderPredications(request, route);
+      route.setRouteHeaderPredications(headerPredications);
     }
 
     return route;
@@ -235,9 +245,11 @@ public class RouteService {
     // İlişkili kayıtları sil ve yenilerini ekle
     headerRepository.deleteByRoute(existingRoute);
     cookieRepository.deleteByRoute(existingRoute);
+    headerPredicationRepository.deleteByRoute(existingRoute);
 
     existingRoute.setRouteHeaderConfigurations(createHeaderConfigurations(request, existingRoute));
     existingRoute.setRouteCookiePredications(createCookiePredications(request, existingRoute));
+    existingRoute.setRouteHeaderPredications(createHeaderPredications(request, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -270,6 +282,14 @@ public class RouteService {
                   predicates.add(
                       definitionUtils.createPredicateDefinition(
                           COOKIE, cookiePredication.getName(), cookiePredication.getRegexp())));
+    }
+
+    if (request.getHeaderPredications() != null && !request.getHeaderPredications().isEmpty()) {
+      request.getHeaderPredications()
+          .forEach(headerPredication ->
+              predicates.add(
+                  definitionUtils.createPredicateDefinition(
+                      HEADER, headerPredication.getName(), headerPredication.getRegexp())));
     }
 
     routeDefinition.setPredicates(predicates);
@@ -344,6 +364,21 @@ public class RouteService {
         .toList();
   }
 
+  private List<RouteHeaderPredication> createHeaderPredications(RouteRequest request, Route route) {
+    if (request.getHeaderPredications() == null) {
+      return new ArrayList<>();
+    }
+
+    return request.getHeaderPredications().stream()
+        .map(headerPredication ->
+            RouteHeaderPredication.builder()
+                .name(headerPredication.getName())
+                .regexp(headerPredication.getRegexp())
+                .route(route)
+                .build())
+        .toList();
+  }
+
   private Mono<Route> applyNewRouteDefinition(Route route) {
     return routeDefinitionWriter
         .save(Mono.just(route.getRouteDefinition()))
@@ -397,6 +432,17 @@ public class RouteService {
               .toList();
     }
 
+    List<HeaderPredicationResponse> headerPredicationResponses = new ArrayList<>();
+    if (route.getRouteHeaderPredications() != null) {
+      headerPredicationResponses = route.getRouteHeaderPredications().stream()
+          .map(headerPredication ->
+              HeaderPredicationResponse.builder()
+                  .name(headerPredication.getName())
+                  .regexp(headerPredication.getRegexp())
+                  .build())
+          .toList();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -406,6 +452,7 @@ public class RouteService {
         .activationTime(route.getActivationTime())
         .expirationTime(route.getExpirationTime())
         .cookiePredications(cookiePredicationResponses)
+        .headerPredications(headerPredicationResponses)
         .build();
   }
 }

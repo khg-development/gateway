@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import tr.com.khg.services.gateway.entity.enums.HttpMethods;
 import tr.com.khg.services.gateway.model.HeaderConfiguration;
+import tr.com.khg.services.gateway.model.response.HeaderPredicationResponse;
 
 @Data
 @Builder
@@ -22,4 +23,5 @@ public class RouteResponse {
   private ZonedDateTime activationTime;
   private ZonedDateTime expirationTime;
   private List<CookiePredicationResponse> cookiePredications;
+  private List<HeaderPredicationResponse> headerPredications;
 }

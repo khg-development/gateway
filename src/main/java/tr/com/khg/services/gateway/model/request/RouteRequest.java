@@ -30,4 +30,6 @@ public class RouteRequest {
   private ZonedDateTime expirationTime;
 
   private List<CookiePredication> cookiePredications;
+
+  private List<HeaderPredication> headerPredications;
 }
