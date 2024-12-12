@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CookieResponse {
-    private String name;
-    private String regexp;
+public class CookiePredicationResponse {
+  private String name;
+  private String regexp;
 }

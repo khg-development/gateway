@@ -12,10 +12,10 @@ public enum PredicateType {
   COOKIE("Cookie", "name", "regexp");
 
   private final String type;
-  private final String[] arg;
+  private final String[] args;
 
-  PredicateType(String type, String... arg) {
+  PredicateType(String type, String... args) {
     this.type = type;
-    this.arg = arg;
+    this.args = args;
   }
 }

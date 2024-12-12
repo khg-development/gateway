@@ -15,13 +15,13 @@ import tr.com.khg.services.gateway.entity.enums.PredicateType;
 public class DefinitionUtils {
   public PredicateDefinition createPredicateDefinition(
       PredicateType predicateType, String... args) {
-    if (predicateType.getArg().length != args.length) {
+    if (predicateType.getArgs().length != args.length) {
       throw new IllegalArgumentException("Number of arguments does not match predicate type");
     }
     PredicateDefinition methodPredicate = new PredicateDefinition();
     methodPredicate.setName(predicateType.getType());
-    for (int i = 0; i < predicateType.getArg().length; i++) {
-      methodPredicate.addArg(predicateType.getArg()[i], args[i]);
+    for (int i = 0; i < predicateType.getArgs().length; i++) {
+      methodPredicate.addArg(predicateType.getArgs()[i], args[i]);
     }
     return methodPredicate;
   }

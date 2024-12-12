@@ -21,5 +21,5 @@ public class RouteResponse {
   private List<HeaderConfiguration> headers;
   private ZonedDateTime activationTime;
   private ZonedDateTime expirationTime;
-  private List<CookieResponse> cookies;
+  private List<CookiePredicationResponse> cookiePredications;
 }

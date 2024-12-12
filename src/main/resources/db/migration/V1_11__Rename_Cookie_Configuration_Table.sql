@@ -1,0 +1,1 @@
+ALTER TABLE route_cookie_configurations RENAME TO route_cookie_predications;

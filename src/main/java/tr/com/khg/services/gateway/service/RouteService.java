@@ -21,17 +21,17 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import tr.com.khg.services.gateway.entity.ApiProxy;
 import tr.com.khg.services.gateway.entity.Route;
-import tr.com.khg.services.gateway.entity.RouteCookieConfiguration;
+import tr.com.khg.services.gateway.entity.RouteCookiePredication;
 import tr.com.khg.services.gateway.entity.RouteHeaderConfiguration;
 import tr.com.khg.services.gateway.entity.enums.FilterType;
 import tr.com.khg.services.gateway.exception.DuplicateRouteException;
 import tr.com.khg.services.gateway.model.HeaderConfiguration;
 import tr.com.khg.services.gateway.model.request.RouteRequest;
-import tr.com.khg.services.gateway.model.response.CookieResponse;
+import tr.com.khg.services.gateway.model.response.CookiePredicationResponse;
 import tr.com.khg.services.gateway.model.response.RouteResponse;
 import tr.com.khg.services.gateway.model.response.RoutesResponse;
 import tr.com.khg.services.gateway.repository.ApiProxyRepository;
-import tr.com.khg.services.gateway.repository.RouteCookieConfigurationRepository;
+import tr.com.khg.services.gateway.repository.RouteCookiePredicationRepository;
 import tr.com.khg.services.gateway.repository.RouteHeaderConfigurationRepository;
 import tr.com.khg.services.gateway.repository.RouteRepository;
 import tr.com.khg.services.gateway.utils.DefinitionUtils;
@@ -47,7 +47,7 @@ public class RouteService {
   private final ApplicationEventPublisher eventPublisher;
   private final RouteDefinitionWriter routeDefinitionWriter;
   private final RouteHeaderConfigurationRepository headerRepository;
-  private final RouteCookieConfigurationRepository cookieRepository;
+  private final RouteCookiePredicationRepository cookieRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -140,10 +140,10 @@ public class RouteService {
   public Mono<RouteResponse> updateRoute(String proxyName, RouteRequest request) {
     return Mono.fromCallable(
             () -> {
-                Route existingRoute = findRouteByProxyAndRouteId(proxyName, request.getRouteId());
-                validateUniqueRoute(proxyName, request.getRouteId(), request);
-                updateRouteFromRequest(proxyName, existingRoute, request);
-                return routeRepository.save(existingRoute);
+              Route existingRoute = findRouteByProxyAndRouteId(proxyName, request.getRouteId());
+              validateUniqueRoute(proxyName, request.getRouteId(), request);
+              updateRouteFromRequest(proxyName, existingRoute, request);
+              return routeRepository.save(existingRoute);
             })
         .subscribeOn(Schedulers.boundedElastic())
         .flatMap(this::applyExistingRouteDefinition)
@@ -197,7 +197,7 @@ public class RouteService {
             .enabled(true)
             .activationTime(request.getActivationTime())
             .expirationTime(request.getExpirationTime())
-            .routeCookieConfigurations(new ArrayList<>())
+            .routeCookiePredications(new ArrayList<>())
             .routeHeaderConfigurations(new ArrayList<>())
             .build();
 
@@ -210,10 +210,9 @@ public class RouteService {
       route.setRouteHeaderConfigurations(headerConfigurations);
     }
 
-    if (request.getCookies() != null && !request.getCookies().isEmpty()) {
-      List<RouteCookieConfiguration> cookieConfigurations =
-          createCookieConfigurations(request, route);
-      route.setRouteCookieConfigurations(cookieConfigurations);
+    if (request.getCookiePredications() != null && !request.getCookiePredications().isEmpty()) {
+      List<RouteCookiePredication> cookiePredications = createCookiePredications(request, route);
+      route.setRouteCookiePredications(cookiePredications);
     }
 
     return route;
@@ -238,7 +237,7 @@ public class RouteService {
     cookieRepository.deleteByRoute(existingRoute);
 
     existingRoute.setRouteHeaderConfigurations(createHeaderConfigurations(request, existingRoute));
-    existingRoute.setRouteCookieConfigurations(createCookieConfigurations(request, existingRoute));
+    existingRoute.setRouteCookiePredications(createCookiePredications(request, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -263,14 +262,14 @@ public class RouteService {
           definitionUtils.createPredicateDefinition(BEFORE, request.getExpirationTime()));
     }
 
-    if (request.getCookies() != null && !request.getCookies().isEmpty()) {
+    if (request.getCookiePredications() != null && !request.getCookiePredications().isEmpty()) {
       request
-          .getCookies()
+          .getCookiePredications()
           .forEach(
-              cookie ->
+              cookiePredication ->
                   predicates.add(
                       definitionUtils.createPredicateDefinition(
-                          COOKIE, cookie.getName(), cookie.getRegexp())));
+                          COOKIE, cookiePredication.getName(), cookiePredication.getRegexp())));
     }
 
     routeDefinition.setPredicates(predicates);
@@ -329,18 +328,17 @@ public class RouteService {
         .toList();
   }
 
-  private List<RouteCookieConfiguration> createCookieConfigurations(
-      RouteRequest request, Route route) {
-    if (request.getCookies() == null) {
+  private List<RouteCookiePredication> createCookiePredications(RouteRequest request, Route route) {
+    if (request.getCookiePredications() == null) {
       return new ArrayList<>();
     }
 
-    return request.getCookies().stream()
+    return request.getCookiePredications().stream()
         .map(
-            cookieConfig ->
-                RouteCookieConfiguration.builder()
-                    .name(cookieConfig.getName())
-                    .regexp(cookieConfig.getRegexp())
+            cookiePredication ->
+                RouteCookiePredication.builder()
+                    .name(cookiePredication.getName())
+                    .regexp(cookiePredication.getRegexp())
                     .route(route)
                     .build())
         .toList();
@@ -386,15 +384,15 @@ public class RouteService {
               .toList();
     }
 
-    List<CookieResponse> cookieResponses = new ArrayList<>();
-    if (route.getRouteCookieConfigurations() != null) {
-      cookieResponses =
-          route.getRouteCookieConfigurations().stream()
+    List<CookiePredicationResponse> cookiePredicationResponses = new ArrayList<>();
+    if (route.getRouteCookiePredications() != null) {
+      cookiePredicationResponses =
+          route.getRouteCookiePredications().stream()
               .map(
-                  cookieConfig ->
-                      CookieResponse.builder()
-                          .name(cookieConfig.getName())
-                          .regexp(cookieConfig.getRegexp())
+                  cookiePredication ->
+                      CookiePredicationResponse.builder()
+                          .name(cookiePredication.getName())
+                          .regexp(cookiePredication.getRegexp())
                           .build())
               .toList();
     }
@@ -407,7 +405,7 @@ public class RouteService {
         .headers(headerConfigurations)
         .activationTime(route.getActivationTime())
         .expirationTime(route.getExpirationTime())
-        .cookies(cookieResponses)
+        .cookiePredications(cookiePredicationResponses)
         .build();
   }
 }

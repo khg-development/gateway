@@ -69,5 +69,5 @@ public class Route implements Serializable {
   private List<RouteHeaderConfiguration> routeHeaderConfigurations = new ArrayList<>();
 
   @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-  private List<RouteCookieConfiguration> routeCookieConfigurations = new ArrayList<>();
+  private List<RouteCookiePredication> routeCookiePredications = new ArrayList<>();
 }
