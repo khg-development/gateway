@@ -242,7 +242,6 @@ public class RouteService {
     existingRoute.setActivationTime(request.getActivationTime());
     existingRoute.setExpirationTime(request.getExpirationTime());
 
-    // İlişkili kayıtları sil ve yenilerini ekle
     headerRepository.deleteByRoute(existingRoute);
     cookieRepository.deleteByRoute(existingRoute);
     headerPredicationRepository.deleteByRoute(existingRoute);
