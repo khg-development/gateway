@@ -12,7 +12,8 @@ public enum PredicateType {
   COOKIE("Cookie", "name", "regexp"),
   HEADER("Header", "header", "regexp"),
   HOST("Host", "patterns"),
-  QUERY("Query", "param", "regexp", "required");
+  QUERY("Query", "param", "regexp", "required"),
+  REMOTE_ADDR("RemoteAddr", "sources");
 
   private final String type;
   private final String[] args;

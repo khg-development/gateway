@@ -11,6 +11,7 @@ import tr.com.khg.services.gateway.model.HeaderConfiguration;
 import tr.com.khg.services.gateway.model.response.HeaderPredicationResponse;
 import tr.com.khg.services.gateway.model.response.HostPredicationResponse;
 import tr.com.khg.services.gateway.model.response.QueryPredicationResponse;
+import tr.com.khg.services.gateway.model.response.RemoteAddrPredicationResponse;
 
 @Data
 @Builder
@@ -29,4 +30,5 @@ public class RouteResponse {
   private List<HeaderPredicationResponse> headerPredications;
   private List<HostPredicationResponse> hostPredications;
   private List<QueryPredicationResponse> queryPredications;
+  private List<RemoteAddrPredicationResponse> remoteAddrPredications;
 }

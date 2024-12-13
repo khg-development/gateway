@@ -37,4 +37,6 @@ public class RouteRequest {
   private List<HostPredication> hostPredications;
 
   private List<QueryPredication> queryPredications;
+
+  private List<RemoteAddrPredication> remoteAddrPredications;
 }
