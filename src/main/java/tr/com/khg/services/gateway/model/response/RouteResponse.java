@@ -10,6 +10,7 @@ import tr.com.khg.services.gateway.entity.enums.HttpMethods;
 import tr.com.khg.services.gateway.model.HeaderConfiguration;
 import tr.com.khg.services.gateway.model.response.HeaderPredicationResponse;
 import tr.com.khg.services.gateway.model.response.HostPredicationResponse;
+import tr.com.khg.services.gateway.model.response.QueryPredicationResponse;
 
 @Data
 @Builder
@@ -27,4 +28,5 @@ public class RouteResponse {
   private List<CookiePredicationResponse> cookiePredications;
   private List<HeaderPredicationResponse> headerPredications;
   private List<HostPredicationResponse> hostPredications;
+  private List<QueryPredicationResponse> queryPredications;
 }

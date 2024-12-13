@@ -12,7 +12,7 @@ public enum PredicateType {
   COOKIE("Cookie", "name", "regexp"),
   HEADER("Header", "header", "regexp"),
   HOST("Host", "patterns"),
-  QUERY("Query", "param", "regexp");
+  QUERY("Query", "param", "regexp", "required");
 
   private final String type;
   private final String[] args;

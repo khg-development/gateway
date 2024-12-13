@@ -35,4 +35,6 @@ public class RouteRequest {
   private List<HeaderPredication> headerPredications;
 
   private List<HostPredication> hostPredications;
+
+  private List<QueryPredication> queryPredications;
 }

@@ -25,6 +25,7 @@ import tr.com.khg.services.gateway.entity.RouteCookiePredication;
 import tr.com.khg.services.gateway.entity.RouteHeaderConfiguration;
 import tr.com.khg.services.gateway.entity.RouteHeaderPredication;
 import tr.com.khg.services.gateway.entity.RouteHostPredication;
+import tr.com.khg.services.gateway.entity.RouteQueryPredication;
 import tr.com.khg.services.gateway.entity.enums.FilterType;
 import tr.com.khg.services.gateway.exception.DuplicateRouteException;
 import tr.com.khg.services.gateway.model.HeaderConfiguration;
@@ -33,6 +34,7 @@ import tr.com.khg.services.gateway.model.request.RouteRequest;
 import tr.com.khg.services.gateway.model.response.CookiePredicationResponse;
 import tr.com.khg.services.gateway.model.response.HeaderPredicationResponse;
 import tr.com.khg.services.gateway.model.response.HostPredicationResponse;
+import tr.com.khg.services.gateway.model.response.QueryPredicationResponse;
 import tr.com.khg.services.gateway.model.response.RouteResponse;
 import tr.com.khg.services.gateway.model.response.RoutesResponse;
 import tr.com.khg.services.gateway.repository.ApiProxyRepository;
@@ -40,6 +42,7 @@ import tr.com.khg.services.gateway.repository.RouteCookiePredicationRepository;
 import tr.com.khg.services.gateway.repository.RouteHeaderConfigurationRepository;
 import tr.com.khg.services.gateway.repository.RouteHeaderPredicationRepository;
 import tr.com.khg.services.gateway.repository.RouteHostPredicationRepository;
+import tr.com.khg.services.gateway.repository.RouteQueryPredicationRepository;
 import tr.com.khg.services.gateway.repository.RouteRepository;
 import tr.com.khg.services.gateway.utils.DefinitionUtils;
 
@@ -47,6 +50,8 @@ import tr.com.khg.services.gateway.utils.DefinitionUtils;
 @Service
 @RequiredArgsConstructor
 public class RouteService {
+
+  private static final String DEFAULT_REGEX = "^.+$";
 
   private final RouteRepository routeRepository;
   private final DefinitionUtils definitionUtils;
@@ -57,6 +62,7 @@ public class RouteService {
   private final RouteCookiePredicationRepository cookieRepository;
   private final RouteHeaderPredicationRepository headerPredicationRepository;
   private final RouteHostPredicationRepository hostPredicationRepository;
+  private final RouteQueryPredicationRepository queryPredicationRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -212,6 +218,7 @@ public class RouteService {
             .routeHeaderConfigurations(new ArrayList<>())
             .routeHeaderPredications(new ArrayList<>())
             .routeHostPredications(new ArrayList<>())
+            .routeQueryPredications(new ArrayList<>())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -236,6 +243,11 @@ public class RouteService {
     if (request.getHostPredications() != null && !request.getHostPredications().isEmpty()) {
       List<RouteHostPredication> hostPredications = createHostPredications(request, route);
       route.setRouteHostPredications(hostPredications);
+    }
+
+    if (request.getQueryPredications() != null && !request.getQueryPredications().isEmpty()) {
+      List<RouteQueryPredication> queryPredications = createQueryPredications(request, route);
+      route.setRouteQueryPredications(queryPredications);
     }
 
     return route;
@@ -263,16 +275,19 @@ public class RouteService {
     existingRoute.getRouteCookiePredications().clear();
     existingRoute.getRouteHeaderPredications().clear();
     existingRoute.getRouteHostPredications().clear();
+    existingRoute.getRouteQueryPredications().clear();
 
     headerRepository.deleteByRoute(existingRoute);
     cookieRepository.deleteByRoute(existingRoute);
     headerPredicationRepository.deleteByRoute(existingRoute);
     hostPredicationRepository.deleteByRoute(existingRoute);
+    queryPredicationRepository.deleteByRoute(existingRoute);
 
     existingRoute.setRouteHeaderConfigurations(createHeaderConfigurations(request, existingRoute));
     existingRoute.setRouteCookiePredications(createCookiePredications(request, existingRoute));
     existingRoute.setRouteHeaderPredications(createHeaderPredications(request, existingRoute));
     existingRoute.setRouteHostPredications(createHostPredications(request, existingRoute));
+    existingRoute.setRouteQueryPredications(createQueryPredications(request, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -327,6 +342,22 @@ public class RouteService {
               .map(HostPredication::getPattern)
               .collect(Collectors.joining(","));
       predicates.add(definitionUtils.createPredicateDefinition(HOST, hostPatterns));
+    }
+
+    if (request.getQueryPredications() != null && !request.getQueryPredications().isEmpty()) {
+      request
+          .getQueryPredications()
+          .forEach(
+              queryPredication -> {
+                String regexp =
+                    queryPredication.getRegexp() != null
+                        ? queryPredication.getRegexp()
+                        : DEFAULT_REGEX;
+                PredicateDefinition queryPredicate =
+                    definitionUtils.createPredicateDefinition(
+                        QUERY, queryPredication.getParam(), regexp, Boolean.TRUE.toString());
+                predicates.add(queryPredicate);
+              });
     }
 
     routeDefinition.setPredicates(predicates);
@@ -432,6 +463,25 @@ public class RouteService {
         .toList();
   }
 
+  private List<RouteQueryPredication> createQueryPredications(RouteRequest request, Route route) {
+    if (request.getQueryPredications() == null) {
+      return new ArrayList<>();
+    }
+
+    return request.getQueryPredications().stream()
+        .map(
+            queryPredication ->
+                RouteQueryPredication.builder()
+                    .param(queryPredication.getParam())
+                    .regexp(
+                        queryPredication.getRegexp() != null
+                            ? queryPredication.getRegexp()
+                            : DEFAULT_REGEX)
+                    .route(route)
+                    .build())
+        .toList();
+  }
+
   private Mono<Route> applyNewRouteDefinition(Route route) {
     return routeDefinitionWriter
         .save(Mono.just(route.getRouteDefinition()))
@@ -510,6 +560,19 @@ public class RouteService {
               .toList();
     }
 
+    List<QueryPredicationResponse> queryPredicationResponses = new ArrayList<>();
+    if (route.getRouteQueryPredications() != null) {
+      queryPredicationResponses =
+          route.getRouteQueryPredications().stream()
+              .map(
+                  queryPredication ->
+                      QueryPredicationResponse.builder()
+                          .param(queryPredication.getParam())
+                          .regexp(queryPredication.getRegexp())
+                          .build())
+              .toList();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -522,6 +585,7 @@ public class RouteService {
         .cookiePredications(cookiePredicationResponses)
         .headerPredications(headerPredicationResponses)
         .hostPredications(hostPredicationResponses)
+        .queryPredications(queryPredicationResponses)
         .build();
   }
 }
