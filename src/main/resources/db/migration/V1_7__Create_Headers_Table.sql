@@ -5,5 +5,5 @@ CREATE TABLE route_header_configurations
     header_value VARCHAR(255) NOT NULL,
     type         VARCHAR(50)  NOT NULL,
     route_id     BIGINT,
-    FOREIGN KEY (route_id) REFERENCES routes (id)
+    FOREIGN KEY (route_id) REFERENCES routes (id) ON DELETE CASCADE
 );

@@ -24,18 +24,22 @@ import tr.com.khg.services.gateway.entity.Route;
 import tr.com.khg.services.gateway.entity.RouteCookiePredication;
 import tr.com.khg.services.gateway.entity.RouteHeaderConfiguration;
 import tr.com.khg.services.gateway.entity.RouteHeaderPredication;
+import tr.com.khg.services.gateway.entity.RouteHostPredication;
 import tr.com.khg.services.gateway.entity.enums.FilterType;
 import tr.com.khg.services.gateway.exception.DuplicateRouteException;
 import tr.com.khg.services.gateway.model.HeaderConfiguration;
+import tr.com.khg.services.gateway.model.request.HostPredication;
 import tr.com.khg.services.gateway.model.request.RouteRequest;
 import tr.com.khg.services.gateway.model.response.CookiePredicationResponse;
 import tr.com.khg.services.gateway.model.response.HeaderPredicationResponse;
+import tr.com.khg.services.gateway.model.response.HostPredicationResponse;
 import tr.com.khg.services.gateway.model.response.RouteResponse;
 import tr.com.khg.services.gateway.model.response.RoutesResponse;
 import tr.com.khg.services.gateway.repository.ApiProxyRepository;
 import tr.com.khg.services.gateway.repository.RouteCookiePredicationRepository;
 import tr.com.khg.services.gateway.repository.RouteHeaderConfigurationRepository;
 import tr.com.khg.services.gateway.repository.RouteHeaderPredicationRepository;
+import tr.com.khg.services.gateway.repository.RouteHostPredicationRepository;
 import tr.com.khg.services.gateway.repository.RouteRepository;
 import tr.com.khg.services.gateway.utils.DefinitionUtils;
 
@@ -52,6 +56,7 @@ public class RouteService {
   private final RouteHeaderConfigurationRepository headerRepository;
   private final RouteCookiePredicationRepository cookieRepository;
   private final RouteHeaderPredicationRepository headerPredicationRepository;
+  private final RouteHostPredicationRepository hostPredicationRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -204,6 +209,7 @@ public class RouteService {
             .routeCookiePredications(new ArrayList<>())
             .routeHeaderConfigurations(new ArrayList<>())
             .routeHeaderPredications(new ArrayList<>())
+            .routeHostPredications(new ArrayList<>())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -225,6 +231,11 @@ public class RouteService {
       route.setRouteHeaderPredications(headerPredications);
     }
 
+    if (request.getHostPredications() != null && !request.getHostPredications().isEmpty()) {
+      List<RouteHostPredication> hostPredications = createHostPredications(request, route);
+      route.setRouteHostPredications(hostPredications);
+    }
+
     return route;
   }
 
@@ -242,13 +253,20 @@ public class RouteService {
     existingRoute.setActivationTime(request.getActivationTime());
     existingRoute.setExpirationTime(request.getExpirationTime());
 
+    existingRoute.getRouteHeaderConfigurations().clear();
+    existingRoute.getRouteCookiePredications().clear();
+    existingRoute.getRouteHeaderPredications().clear();
+    existingRoute.getRouteHostPredications().clear();
+
     headerRepository.deleteByRoute(existingRoute);
     cookieRepository.deleteByRoute(existingRoute);
     headerPredicationRepository.deleteByRoute(existingRoute);
+    hostPredicationRepository.deleteByRoute(existingRoute);
 
     existingRoute.setRouteHeaderConfigurations(createHeaderConfigurations(request, existingRoute));
     existingRoute.setRouteCookiePredications(createCookiePredications(request, existingRoute));
     existingRoute.setRouteHeaderPredications(createHeaderPredications(request, existingRoute));
+    existingRoute.setRouteHostPredications(createHostPredications(request, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -284,11 +302,21 @@ public class RouteService {
     }
 
     if (request.getHeaderPredications() != null && !request.getHeaderPredications().isEmpty()) {
-      request.getHeaderPredications()
-          .forEach(headerPredication ->
-              predicates.add(
-                  definitionUtils.createPredicateDefinition(
-                      HEADER, headerPredication.getName(), headerPredication.getRegexp())));
+      request
+          .getHeaderPredications()
+          .forEach(
+              headerPredication ->
+                  predicates.add(
+                      definitionUtils.createPredicateDefinition(
+                          HEADER, headerPredication.getName(), headerPredication.getRegexp())));
+    }
+
+    if (request.getHostPredications() != null && !request.getHostPredications().isEmpty()) {
+      String hostPatterns =
+          request.getHostPredications().stream()
+              .map(HostPredication::getPattern)
+              .collect(Collectors.joining(","));
+      predicates.add(definitionUtils.createPredicateDefinition(HOST, hostPatterns));
     }
 
     routeDefinition.setPredicates(predicates);
@@ -369,12 +397,28 @@ public class RouteService {
     }
 
     return request.getHeaderPredications().stream()
-        .map(headerPredication ->
-            RouteHeaderPredication.builder()
-                .name(headerPredication.getName())
-                .regexp(headerPredication.getRegexp())
-                .route(route)
-                .build())
+        .map(
+            headerPredication ->
+                RouteHeaderPredication.builder()
+                    .name(headerPredication.getName())
+                    .regexp(headerPredication.getRegexp())
+                    .route(route)
+                    .build())
+        .toList();
+  }
+
+  private List<RouteHostPredication> createHostPredications(RouteRequest request, Route route) {
+    if (request.getHostPredications() == null) {
+      return new ArrayList<>();
+    }
+
+    return request.getHostPredications().stream()
+        .map(
+            hostPredication ->
+                RouteHostPredication.builder()
+                    .pattern(hostPredication.getPattern())
+                    .route(route)
+                    .build())
         .toList();
   }
 
@@ -433,13 +477,27 @@ public class RouteService {
 
     List<HeaderPredicationResponse> headerPredicationResponses = new ArrayList<>();
     if (route.getRouteHeaderPredications() != null) {
-      headerPredicationResponses = route.getRouteHeaderPredications().stream()
-          .map(headerPredication ->
-              HeaderPredicationResponse.builder()
-                  .name(headerPredication.getName())
-                  .regexp(headerPredication.getRegexp())
-                  .build())
-          .toList();
+      headerPredicationResponses =
+          route.getRouteHeaderPredications().stream()
+              .map(
+                  headerPredication ->
+                      HeaderPredicationResponse.builder()
+                          .name(headerPredication.getName())
+                          .regexp(headerPredication.getRegexp())
+                          .build())
+              .toList();
+    }
+
+    List<HostPredicationResponse> hostPredicationResponses = new ArrayList<>();
+    if (route.getRouteHostPredications() != null) {
+      hostPredicationResponses =
+          route.getRouteHostPredications().stream()
+              .map(
+                  hostPredication ->
+                      HostPredicationResponse.builder()
+                          .pattern(hostPredication.getPattern())
+                          .build())
+              .toList();
     }
 
     return RouteResponse.builder()
@@ -452,6 +510,7 @@ public class RouteService {
         .expirationTime(route.getExpirationTime())
         .cookiePredications(cookiePredicationResponses)
         .headerPredications(headerPredicationResponses)
+        .hostPredications(hostPredicationResponses)
         .build();
   }
 }

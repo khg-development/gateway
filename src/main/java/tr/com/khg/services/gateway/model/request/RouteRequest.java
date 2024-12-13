@@ -32,4 +32,6 @@ public class RouteRequest {
   private List<CookiePredication> cookiePredications;
 
   private List<HeaderPredication> headerPredications;
+
+  private List<HostPredication> hostPredications;
 }

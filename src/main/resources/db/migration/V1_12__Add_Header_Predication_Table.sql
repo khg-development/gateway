@@ -4,5 +4,5 @@ CREATE TABLE route_header_predications
     header_name         VARCHAR(255) NOT NULL,
     header_value_regexp VARCHAR(255) NOT NULL,
     route_id            BIGINT,
-    FOREIGN KEY (route_id) REFERENCES routes (id)
+    FOREIGN KEY (route_id) REFERENCES routes (id) ON DELETE CASCADE
 );

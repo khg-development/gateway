@@ -10,7 +10,8 @@ public enum PredicateType {
   BEFORE("Before", "datetime"),
   BETWEEN("Between", "datetime1", "datetime2"),
   COOKIE("Cookie", "name", "regexp"),
-  HEADER("Header", "header", "regexp");
+  HEADER("Header", "header", "regexp"),
+  HOST("Host", "patterns");
 
   private final String type;
   private final String[] args;
