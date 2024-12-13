@@ -379,11 +379,11 @@ public class RouteService {
 
     if (request.getRemoteAddrPredications() != null
         && !request.getRemoteAddrPredications().isEmpty()) {
-      String sourceCidrs =
+      String sources =
           request.getRemoteAddrPredications().stream()
               .map(RemoteAddrPredication::getSource)
               .collect(Collectors.joining(","));
-      predicates.add(definitionUtils.createPredicateDefinition(REMOTE_ADDR, sourceCidrs));
+      predicates.add(definitionUtils.createPredicateDefinition(REMOTE_ADDR, sources));
     }
 
     routeDefinition.setPredicates(predicates);
