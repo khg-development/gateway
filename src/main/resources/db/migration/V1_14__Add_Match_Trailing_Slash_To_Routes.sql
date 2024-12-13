@@ -1,0 +1,2 @@
+ALTER TABLE routes
+ADD COLUMN match_trailing_slash BOOLEAN NOT NULL DEFAULT TRUE;

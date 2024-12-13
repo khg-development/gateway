@@ -4,14 +4,15 @@ import lombok.Getter;
 
 @Getter
 public enum PredicateType {
-  PATH("Path", "pattern"),
+  PATH("Path", "pattern", "matchTrailingSlash"),
   METHOD("Method", "method"),
   AFTER("After", "datetime"),
   BEFORE("Before", "datetime"),
   BETWEEN("Between", "datetime1", "datetime2"),
   COOKIE("Cookie", "name", "regexp"),
   HEADER("Header", "header", "regexp"),
-  HOST("Host", "patterns");
+  HOST("Host", "patterns"),
+  QUERY("Query", "param", "regexp");
 
   private final String type;
   private final String[] args;

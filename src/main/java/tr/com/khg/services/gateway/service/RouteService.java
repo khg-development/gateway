@@ -206,6 +206,8 @@ public class RouteService {
             .enabled(true)
             .activationTime(request.getActivationTime())
             .expirationTime(request.getExpirationTime())
+            .matchTrailingSlash(
+                request.getMatchTrailingSlash() != null ? request.getMatchTrailingSlash() : true)
             .routeCookiePredications(new ArrayList<>())
             .routeHeaderConfigurations(new ArrayList<>())
             .routeHeaderPredications(new ArrayList<>())
@@ -252,6 +254,10 @@ public class RouteService {
     existingRoute.setMethod(request.getMethod());
     existingRoute.setActivationTime(request.getActivationTime());
     existingRoute.setExpirationTime(request.getExpirationTime());
+    existingRoute.setMatchTrailingSlash(
+        request.getMatchTrailingSlash() != null
+            ? request.getMatchTrailingSlash()
+            : existingRoute.isMatchTrailingSlash());
 
     existingRoute.getRouteHeaderConfigurations().clear();
     existingRoute.getRouteCookiePredications().clear();
@@ -275,7 +281,11 @@ public class RouteService {
     routeDefinition.setUri(URI.create(apiProxy.getUri()));
 
     List<PredicateDefinition> predicates = new ArrayList<>();
-    predicates.add(definitionUtils.createPredicateDefinition(PATH, request.getPath()));
+    boolean matchTrailingSlash =
+        request.getMatchTrailingSlash() != null ? request.getMatchTrailingSlash() : true;
+    predicates.add(
+        definitionUtils.createPredicateDefinition(
+            PATH, request.getPath(), String.valueOf(matchTrailingSlash)));
     predicates.add(definitionUtils.createPredicateDefinition(METHOD, request.getMethod().name()));
 
     if (request.getActivationTime() != null && request.getExpirationTime() != null) {
@@ -505,6 +515,7 @@ public class RouteService {
         .enabled(route.isEnabled())
         .path(route.getPath())
         .method(route.getMethod())
+        .matchTrailingSlash(route.isMatchTrailingSlash())
         .headers(headerConfigurations)
         .activationTime(route.getActivationTime())
         .expirationTime(route.getExpirationTime())

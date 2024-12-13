@@ -19,6 +19,7 @@ public class RouteResponse {
   private String routeId;
   private Boolean enabled;
   private String path;
+  private Boolean matchTrailingSlash;
   private HttpMethods method;
   private List<HeaderConfiguration> headers;
   private ZonedDateTime activationTime;

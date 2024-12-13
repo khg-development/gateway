@@ -51,6 +51,9 @@ public class Route implements Serializable {
   @Column(name = "path", nullable = false)
   private String path;
 
+  @Column(name = "match_trailing_slash", nullable = false)
+  private boolean matchTrailingSlash = true;
+
   @Enumerated(EnumType.STRING)
   @Column(name = "method", nullable = false)
   private HttpMethods method;
