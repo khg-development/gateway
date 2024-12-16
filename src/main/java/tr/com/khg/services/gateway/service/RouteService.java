@@ -28,12 +28,14 @@ import tr.com.khg.services.gateway.entity.RouteHostPredication;
 import tr.com.khg.services.gateway.entity.RouteQueryPredication;
 import tr.com.khg.services.gateway.entity.RouteRemoteAddrPredication;
 import tr.com.khg.services.gateway.entity.RouteWeightPredication;
+import tr.com.khg.services.gateway.entity.RouteXForwardedRemoteAddrPredication;
 import tr.com.khg.services.gateway.entity.enums.FilterType;
 import tr.com.khg.services.gateway.exception.DuplicateRouteException;
 import tr.com.khg.services.gateway.model.HeaderConfiguration;
 import tr.com.khg.services.gateway.model.request.HostPredication;
 import tr.com.khg.services.gateway.model.request.RemoteAddrPredication;
 import tr.com.khg.services.gateway.model.request.RouteRequest;
+import tr.com.khg.services.gateway.model.request.XForwardedRemoteAddrPredication;
 import tr.com.khg.services.gateway.model.response.CookiePredicationResponse;
 import tr.com.khg.services.gateway.model.response.HeaderPredicationResponse;
 import tr.com.khg.services.gateway.model.response.HostPredicationResponse;
@@ -42,6 +44,7 @@ import tr.com.khg.services.gateway.model.response.RemoteAddrPredicationResponse;
 import tr.com.khg.services.gateway.model.response.RouteResponse;
 import tr.com.khg.services.gateway.model.response.RoutesResponse;
 import tr.com.khg.services.gateway.model.response.WeightPredicationResponse;
+import tr.com.khg.services.gateway.model.response.XForwardedRemoteAddrPredicationResponse;
 import tr.com.khg.services.gateway.repository.ApiProxyRepository;
 import tr.com.khg.services.gateway.repository.RouteCookiePredicationRepository;
 import tr.com.khg.services.gateway.repository.RouteHeaderConfigurationRepository;
@@ -51,6 +54,7 @@ import tr.com.khg.services.gateway.repository.RouteQueryPredicationRepository;
 import tr.com.khg.services.gateway.repository.RouteRemoteAddrPredicationRepository;
 import tr.com.khg.services.gateway.repository.RouteRepository;
 import tr.com.khg.services.gateway.repository.RouteWeightPredicationRepository;
+import tr.com.khg.services.gateway.repository.RouteXForwardedRemoteAddrPredicationRepository;
 import tr.com.khg.services.gateway.utils.DefinitionUtils;
 
 @Slf4j
@@ -72,6 +76,7 @@ public class RouteService {
   private final RouteQueryPredicationRepository queryPredicationRepository;
   private final RouteRemoteAddrPredicationRepository remoteAddrPredicationRepository;
   private final RouteWeightPredicationRepository weightPredicationRepository;
+  private final RouteXForwardedRemoteAddrPredicationRepository forwardedAddrPredicationRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -229,6 +234,7 @@ public class RouteService {
             .routeHostPredications(new ArrayList<>())
             .routeQueryPredications(new ArrayList<>())
             .routeRemoteAddrPredications(new ArrayList<>())
+            .routeXForwardedRemoteAddrPredications(new ArrayList<>())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -272,6 +278,13 @@ public class RouteService {
       route.setRouteWeightPredications(weightPredications);
     }
 
+    if (request.getXForwardedRemoteAddrPredications() != null
+        && !request.getXForwardedRemoteAddrPredications().isEmpty()) {
+      List<RouteXForwardedRemoteAddrPredication> xForwardedRemoteAddrPredications =
+          createXForwardedRemoteAddrPredications(request, route);
+      route.setRouteXForwardedRemoteAddrPredications(xForwardedRemoteAddrPredications);
+    }
+
     return route;
   }
 
@@ -299,6 +312,7 @@ public class RouteService {
     existingRoute.getRouteHostPredications().clear();
     existingRoute.getRouteQueryPredications().clear();
     existingRoute.getRouteRemoteAddrPredications().clear();
+    existingRoute.getRouteXForwardedRemoteAddrPredications().clear();
 
     headerRepository.deleteByRoute(existingRoute);
     cookieRepository.deleteByRoute(existingRoute);
@@ -307,6 +321,7 @@ public class RouteService {
     queryPredicationRepository.deleteByRoute(existingRoute);
     remoteAddrPredicationRepository.deleteByRoute(existingRoute);
     weightPredicationRepository.deleteByRoute(existingRoute);
+    forwardedAddrPredicationRepository.deleteByRoute(existingRoute);
 
     existingRoute.setRouteHeaderConfigurations(createHeaderConfigurations(request, existingRoute));
     existingRoute.setRouteCookiePredications(createCookiePredications(request, existingRoute));
@@ -316,6 +331,8 @@ public class RouteService {
     existingRoute.setRouteRemoteAddrPredications(
         createRemoteAddrPredications(request, existingRoute));
     existingRoute.setRouteWeightPredications(createWeightPredications(request, existingRoute));
+    existingRoute.setRouteXForwardedRemoteAddrPredications(
+        createXForwardedRemoteAddrPredications(request, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -408,6 +425,15 @@ public class RouteService {
                         weightPredication.getGroup(),
                         weightPredication.getWeight().toString()));
               });
+    }
+
+    if (request.getXForwardedRemoteAddrPredications() != null
+        && !request.getXForwardedRemoteAddrPredications().isEmpty()) {
+      String sources =
+          request.getXForwardedRemoteAddrPredications().stream()
+              .map(XForwardedRemoteAddrPredication::getSource)
+              .collect(Collectors.joining(","));
+      predicates.add(definitionUtils.createPredicateDefinition(X_FORWARDED_REMOTE_ADDR, sources));
     }
 
     routeDefinition.setPredicates(predicates);
@@ -564,6 +590,22 @@ public class RouteService {
         .toList();
   }
 
+  private List<RouteXForwardedRemoteAddrPredication> createXForwardedRemoteAddrPredications(
+      RouteRequest request, Route route) {
+    if (request.getXForwardedRemoteAddrPredications() == null) {
+      return new ArrayList<>();
+    }
+
+    return request.getXForwardedRemoteAddrPredications().stream()
+        .map(
+            predication ->
+                RouteXForwardedRemoteAddrPredication.builder()
+                    .source(predication.getSource())
+                    .route(route)
+                    .build())
+        .toList();
+  }
+
   private Mono<Route> applyNewRouteDefinition(Route route) {
     return routeDefinitionWriter
         .save(Mono.just(route.getRouteDefinition()))
@@ -680,6 +722,19 @@ public class RouteService {
               .toList();
     }
 
+    List<XForwardedRemoteAddrPredicationResponse> xForwardedRemoteAddrPredicationResponses =
+        new ArrayList<>();
+    if (route.getRouteXForwardedRemoteAddrPredications() != null) {
+      xForwardedRemoteAddrPredicationResponses =
+          route.getRouteXForwardedRemoteAddrPredications().stream()
+              .map(
+                  predication ->
+                      XForwardedRemoteAddrPredicationResponse.builder()
+                          .source(predication.getSource())
+                          .build())
+              .toList();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -695,6 +750,7 @@ public class RouteService {
         .queryPredications(queryPredicationResponses)
         .remoteAddrPredications(remoteAddrPredicationResponses)
         .weightPredications(weightPredicationResponses)
+        .xForwardedRemoteAddrPredications(xForwardedRemoteAddrPredicationResponses)
         .build();
   }
 }

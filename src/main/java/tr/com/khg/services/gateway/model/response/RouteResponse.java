@@ -13,6 +13,7 @@ import tr.com.khg.services.gateway.model.response.HostPredicationResponse;
 import tr.com.khg.services.gateway.model.response.QueryPredicationResponse;
 import tr.com.khg.services.gateway.model.response.RemoteAddrPredicationResponse;
 import tr.com.khg.services.gateway.model.response.WeightPredicationResponse;
+import tr.com.khg.services.gateway.model.response.XForwardedRemoteAddrPredicationResponse;
 
 @Data
 @Builder
@@ -33,4 +34,5 @@ public class RouteResponse {
   private List<QueryPredicationResponse> queryPredications;
   private List<RemoteAddrPredicationResponse> remoteAddrPredications;
   private List<WeightPredicationResponse> weightPredications;
+  private List<XForwardedRemoteAddrPredicationResponse> xForwardedRemoteAddrPredications;
 }

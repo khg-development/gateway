@@ -14,7 +14,8 @@ public enum PredicateType {
   HOST("Host", "patterns"),
   QUERY("Query", "param", "regexp", "required"),
   REMOTE_ADDR("RemoteAddr", "sources"),
-  WEIGHT("Weight", "weight.group", "weight.weight");
+  WEIGHT("Weight", "weight.group", "weight.weight"),
+  X_FORWARDED_REMOTE_ADDR("XForwardedRemoteAddr", "sources");
 
   private final String type;
   private final String[] args;

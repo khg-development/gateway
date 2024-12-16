@@ -1,6 +1,7 @@
 package tr.com.khg.services.gateway.model.request;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.ZonedDateTime;
@@ -41,4 +42,7 @@ public class RouteRequest {
   private List<RemoteAddrPredication> remoteAddrPredications;
 
   private List<WeightPredication> weightPredications;
+
+  @JsonProperty("xForwardedRemoteAddrPredications")
+  private List<XForwardedRemoteAddrPredication> xForwardedRemoteAddrPredications;
 }
