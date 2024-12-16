@@ -19,40 +19,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-import tr.com.khg.services.gateway.entity.ApiProxy;
-import tr.com.khg.services.gateway.entity.Route;
-import tr.com.khg.services.gateway.entity.RouteAddRequestHeaderFilter;
-import tr.com.khg.services.gateway.entity.RouteCookiePredication;
-import tr.com.khg.services.gateway.entity.RouteHeaderPredication;
-import tr.com.khg.services.gateway.entity.RouteHostPredication;
-import tr.com.khg.services.gateway.entity.RouteQueryPredication;
-import tr.com.khg.services.gateway.entity.RouteRemoteAddrPredication;
-import tr.com.khg.services.gateway.entity.RouteWeightPredication;
-import tr.com.khg.services.gateway.entity.RouteXForwardedRemoteAddrPredication;
+import tr.com.khg.services.gateway.entity.*;
 import tr.com.khg.services.gateway.exception.DuplicateRouteException;
 import tr.com.khg.services.gateway.model.request.*;
-import tr.com.khg.services.gateway.model.response.AddRequestHeaderFilterResponse;
-import tr.com.khg.services.gateway.model.response.CookiePredicationResponse;
-import tr.com.khg.services.gateway.model.response.FiltersResponse;
-import tr.com.khg.services.gateway.model.response.HeaderPredicationResponse;
-import tr.com.khg.services.gateway.model.response.HostPredicationResponse;
-import tr.com.khg.services.gateway.model.response.PredicationsResponse;
-import tr.com.khg.services.gateway.model.response.QueryPredicationResponse;
-import tr.com.khg.services.gateway.model.response.RemoteAddrPredicationResponse;
-import tr.com.khg.services.gateway.model.response.RouteResponse;
-import tr.com.khg.services.gateway.model.response.RoutesResponse;
-import tr.com.khg.services.gateway.model.response.WeightPredicationResponse;
-import tr.com.khg.services.gateway.model.response.XForwardedRemoteAddrPredicationResponse;
-import tr.com.khg.services.gateway.repository.ApiProxyRepository;
-import tr.com.khg.services.gateway.repository.RouteAddRequestHeaderFilterRepository;
-import tr.com.khg.services.gateway.repository.RouteCookiePredicationRepository;
-import tr.com.khg.services.gateway.repository.RouteHeaderPredicationRepository;
-import tr.com.khg.services.gateway.repository.RouteHostPredicationRepository;
-import tr.com.khg.services.gateway.repository.RouteQueryPredicationRepository;
-import tr.com.khg.services.gateway.repository.RouteRemoteAddrPredicationRepository;
-import tr.com.khg.services.gateway.repository.RouteRepository;
-import tr.com.khg.services.gateway.repository.RouteWeightPredicationRepository;
-import tr.com.khg.services.gateway.repository.RouteXForwardedRemoteAddrPredicationRepository;
+import tr.com.khg.services.gateway.model.response.*;
+import tr.com.khg.services.gateway.repository.*;
 import tr.com.khg.services.gateway.utils.DefinitionUtils;
 import tr.com.khg.services.gateway.utils.FilterUtils;
 import tr.com.khg.services.gateway.utils.PredicationUtils;
@@ -79,6 +50,8 @@ public class RouteService {
   private final RouteRemoteAddrPredicationRepository remoteAddrPredicationRepository;
   private final RouteXForwardedRemoteAddrPredicationRepository forwardedAddrPredicationRepository;
   private final RouteAddRequestHeaderFilterRepository addRequestHeaderFilterRepository;
+  private final RouteAddRequestHeaderIfNotPresentFilterRepository
+      addRequestHeaderIfNotPresentFilterRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -230,6 +203,7 @@ public class RouteService {
             .routeRemoteAddrPredications(new ArrayList<>())
             .routeXForwardedRemoteAddrPredications(new ArrayList<>())
             .routeAddRequestHeaderFilters(new ArrayList<>())
+            .routeAddRequestHeaderIfNotPresentFilters(new ArrayList<>())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -282,8 +256,15 @@ public class RouteService {
     Filters f = request.getFilters();
 
     if (f != null && f.getAddRequestHeaders() != null) {
-      List<RouteAddRequestHeaderFilter> filters = filterUtils.createAddRequestHeaderFilters(f, route);
+      List<RouteAddRequestHeaderFilter> filters =
+          filterUtils.createAddRequestHeaderFilters(f, route);
       route.setRouteAddRequestHeaderFilters(filters);
+    }
+
+    if (f != null && f.getAddRequestHeadersIfNotPresent() != null) {
+      List<RouteAddRequestHeaderIfNotPresentFilter> filters =
+          filterUtils.createAddRequestHeaderIfNotPresentFilters(f, route);
+      route.setRouteAddRequestHeaderIfNotPresentFilters(filters);
     }
 
     return route;
@@ -317,6 +298,7 @@ public class RouteService {
     weightPredicationRepository.deleteByRoute(existingRoute);
     forwardedAddrPredicationRepository.deleteByRoute(existingRoute);
     addRequestHeaderFilterRepository.deleteByRoute(existingRoute);
+    addRequestHeaderIfNotPresentFilterRepository.deleteByRoute(existingRoute);
 
     Predications p = request.getPredications();
     existingRoute.setRouteCookiePredications(
@@ -337,6 +319,8 @@ public class RouteService {
     Filters f = request.getFilters();
     existingRoute.setRouteAddRequestHeaderFilters(
         filterUtils.createAddRequestHeaderFilters(f, existingRoute));
+    existingRoute.setRouteAddRequestHeaderIfNotPresentFilters(
+        filterUtils.createAddRequestHeaderIfNotPresentFilters(f, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -466,6 +450,15 @@ public class RouteService {
                         addRequestHeaderFilter.getValue());
                 filters.add(filterDefinition);
               });
+    }
+
+    if (request.getFilters().getAddRequestHeadersIfNotPresent() != null
+        && !request.getFilters().getAddRequestHeadersIfNotPresent().isEmpty()) {
+      String value =
+          request.getFilters().getAddRequestHeadersIfNotPresent().stream()
+              .map(f -> String.join(":", f.getName(), f.getValue()))
+              .collect(Collectors.joining(","));
+      filters.add(definitionUtils.createFilterDefinition(ADD_REQUEST_HEADER_IF_NOT_PRESENT, value));
     }
 
     routeDefinition.setPredicates(predicates);
@@ -600,6 +593,20 @@ public class RouteService {
               .toList();
     }
 
+    List<AddRequestHeaderIfNotPresentFilterResponse> addRequestHeaderIfNotPresentResponses =
+        new ArrayList<>();
+    if (route.getRouteAddRequestHeaderIfNotPresentFilters() != null) {
+      addRequestHeaderIfNotPresentResponses =
+          route.getRouteAddRequestHeaderIfNotPresentFilters().stream()
+              .map(
+                  filter ->
+                      AddRequestHeaderIfNotPresentFilterResponse.builder()
+                          .name(filter.getName())
+                          .value(filter.getValue())
+                          .build())
+              .toList();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -618,7 +625,11 @@ public class RouteService {
                 .weights(weightPredicationResponses)
                 .xforwardedRemoteAddresses(xForwardedRemoteAddrPredicationResponses)
                 .build())
-        .filters(FiltersResponse.builder().addRequestHeaders(addRequestHeaderResponses).build())
+        .filters(
+            FiltersResponse.builder()
+                .addRequestHeaders(addRequestHeaderResponses)
+                .addRequestHeadersIfNotPresent(addRequestHeaderIfNotPresentResponses)
+                .build())
         .build();
   }
 }
