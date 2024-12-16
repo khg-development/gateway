@@ -85,4 +85,7 @@ public class Route implements Serializable {
 
   @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
   private List<RouteRemoteAddrPredication> routeRemoteAddrPredications = new ArrayList<>();
+
+  @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+  private List<RouteWeightPredication> routeWeightPredications = new ArrayList<>();
 }

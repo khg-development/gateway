@@ -13,7 +13,8 @@ public enum PredicateType {
   HEADER("Header", "header", "regexp"),
   HOST("Host", "patterns"),
   QUERY("Query", "param", "regexp", "required"),
-  REMOTE_ADDR("RemoteAddr", "sources");
+  REMOTE_ADDR("RemoteAddr", "sources"),
+  WEIGHT("Weight", "weight.group", "weight.weight");
 
   private final String type;
   private final String[] args;

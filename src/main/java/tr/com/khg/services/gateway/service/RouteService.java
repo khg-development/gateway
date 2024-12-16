@@ -27,6 +27,7 @@ import tr.com.khg.services.gateway.entity.RouteHeaderPredication;
 import tr.com.khg.services.gateway.entity.RouteHostPredication;
 import tr.com.khg.services.gateway.entity.RouteQueryPredication;
 import tr.com.khg.services.gateway.entity.RouteRemoteAddrPredication;
+import tr.com.khg.services.gateway.entity.RouteWeightPredication;
 import tr.com.khg.services.gateway.entity.enums.FilterType;
 import tr.com.khg.services.gateway.exception.DuplicateRouteException;
 import tr.com.khg.services.gateway.model.HeaderConfiguration;
@@ -40,6 +41,7 @@ import tr.com.khg.services.gateway.model.response.QueryPredicationResponse;
 import tr.com.khg.services.gateway.model.response.RemoteAddrPredicationResponse;
 import tr.com.khg.services.gateway.model.response.RouteResponse;
 import tr.com.khg.services.gateway.model.response.RoutesResponse;
+import tr.com.khg.services.gateway.model.response.WeightPredicationResponse;
 import tr.com.khg.services.gateway.repository.ApiProxyRepository;
 import tr.com.khg.services.gateway.repository.RouteCookiePredicationRepository;
 import tr.com.khg.services.gateway.repository.RouteHeaderConfigurationRepository;
@@ -48,6 +50,7 @@ import tr.com.khg.services.gateway.repository.RouteHostPredicationRepository;
 import tr.com.khg.services.gateway.repository.RouteQueryPredicationRepository;
 import tr.com.khg.services.gateway.repository.RouteRemoteAddrPredicationRepository;
 import tr.com.khg.services.gateway.repository.RouteRepository;
+import tr.com.khg.services.gateway.repository.RouteWeightPredicationRepository;
 import tr.com.khg.services.gateway.utils.DefinitionUtils;
 
 @Slf4j
@@ -68,6 +71,7 @@ public class RouteService {
   private final RouteHostPredicationRepository hostPredicationRepository;
   private final RouteQueryPredicationRepository queryPredicationRepository;
   private final RouteRemoteAddrPredicationRepository remoteAddrPredicationRepository;
+  private final RouteWeightPredicationRepository weightPredicationRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -263,6 +267,11 @@ public class RouteService {
       route.setRouteRemoteAddrPredications(remoteAddrPredications);
     }
 
+    if (request.getWeightPredications() != null && !request.getWeightPredications().isEmpty()) {
+      List<RouteWeightPredication> weightPredications = createWeightPredications(request, route);
+      route.setRouteWeightPredications(weightPredications);
+    }
+
     return route;
   }
 
@@ -297,6 +306,7 @@ public class RouteService {
     hostPredicationRepository.deleteByRoute(existingRoute);
     queryPredicationRepository.deleteByRoute(existingRoute);
     remoteAddrPredicationRepository.deleteByRoute(existingRoute);
+    weightPredicationRepository.deleteByRoute(existingRoute);
 
     existingRoute.setRouteHeaderConfigurations(createHeaderConfigurations(request, existingRoute));
     existingRoute.setRouteCookiePredications(createCookiePredications(request, existingRoute));
@@ -305,6 +315,7 @@ public class RouteService {
     existingRoute.setRouteQueryPredications(createQueryPredications(request, existingRoute));
     existingRoute.setRouteRemoteAddrPredications(
         createRemoteAddrPredications(request, existingRoute));
+    existingRoute.setRouteWeightPredications(createWeightPredications(request, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -384,6 +395,19 @@ public class RouteService {
               .map(RemoteAddrPredication::getSource)
               .collect(Collectors.joining(","));
       predicates.add(definitionUtils.createPredicateDefinition(REMOTE_ADDR, sources));
+    }
+
+    if (request.getWeightPredications() != null && !request.getWeightPredications().isEmpty()) {
+      request
+          .getWeightPredications()
+          .forEach(
+              weightPredication -> {
+                predicates.add(
+                    definitionUtils.createPredicateDefinition(
+                        WEIGHT,
+                        weightPredication.getGroup(),
+                        weightPredication.getWeight().toString()));
+              });
     }
 
     routeDefinition.setPredicates(predicates);
@@ -524,6 +548,22 @@ public class RouteService {
         .toList();
   }
 
+  private List<RouteWeightPredication> createWeightPredications(RouteRequest request, Route route) {
+    if (request.getWeightPredications() == null) {
+      return new ArrayList<>();
+    }
+
+    return request.getWeightPredications().stream()
+        .map(
+            weightPredication ->
+                RouteWeightPredication.builder()
+                    .group(weightPredication.getGroup())
+                    .weight(weightPredication.getWeight())
+                    .route(route)
+                    .build())
+        .toList();
+  }
+
   private Mono<Route> applyNewRouteDefinition(Route route) {
     return routeDefinitionWriter
         .save(Mono.just(route.getRouteDefinition()))
@@ -627,6 +667,19 @@ public class RouteService {
               .toList();
     }
 
+    List<WeightPredicationResponse> weightPredicationResponses = new ArrayList<>();
+    if (route.getRouteWeightPredications() != null) {
+      weightPredicationResponses =
+          route.getRouteWeightPredications().stream()
+              .map(
+                  weightPredication ->
+                      WeightPredicationResponse.builder()
+                          .group(weightPredication.getGroup())
+                          .weight(weightPredication.getWeight())
+                          .build())
+              .toList();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -641,6 +694,7 @@ public class RouteService {
         .hostPredications(hostPredicationResponses)
         .queryPredications(queryPredicationResponses)
         .remoteAddrPredications(remoteAddrPredicationResponses)
+        .weightPredications(weightPredicationResponses)
         .build();
   }
 }
