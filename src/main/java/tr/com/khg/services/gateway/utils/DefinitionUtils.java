@@ -35,7 +35,7 @@ public class DefinitionUtils {
     return createPredicateDefinition(predicateType, strArgs);
   }
 
-  public FilterDefinition createHeaderFilterDefinition(FilterType filterType, String... args) {
+  public FilterDefinition createFilterDefinition(FilterType filterType, String... args) {
     FilterDefinition headerFilter = new FilterDefinition();
     headerFilter.setName(filterType.getType());
     Map<String, String> arguments = new HashMap<>();

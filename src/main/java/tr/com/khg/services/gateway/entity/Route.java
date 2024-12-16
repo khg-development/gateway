@@ -90,6 +90,9 @@ public class Route implements Serializable {
   private List<RouteXForwardedRemoteAddrPredication> routeXForwardedRemoteAddrPredications =
       new ArrayList<>();
 
+  @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+  private List<RouteAddRequestHeaderFilter> routeAddRequestHeaderFilters = new ArrayList<>();
+
   public void clearPredications() {
     routeCookiePredications.clear();
     routeHeaderPredications.clear();
@@ -98,5 +101,9 @@ public class Route implements Serializable {
     routeRemoteAddrPredications.clear();
     routeWeightPredications.clear();
     routeXForwardedRemoteAddrPredications.clear();
+  }
+
+  public void clearFilters() {
+    routeAddRequestHeaderFilters.clear();
   }
 }

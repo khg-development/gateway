@@ -27,4 +27,6 @@ public class RouteRequest {
   private ZonedDateTime expirationTime;
 
   private Predications predications;
+
+  private Filters filters;
 }

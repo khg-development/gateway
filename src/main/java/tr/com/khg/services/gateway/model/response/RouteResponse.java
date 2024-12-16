@@ -20,4 +20,5 @@ public class RouteResponse {
   private ZonedDateTime activationTime;
   private ZonedDateTime expirationTime;
   private PredicationsResponse predications;
+  private FiltersResponse filters;
 }
