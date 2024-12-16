@@ -32,13 +32,11 @@ import tr.com.khg.services.gateway.entity.RouteXForwardedRemoteAddrPredication;
 import tr.com.khg.services.gateway.entity.enums.FilterType;
 import tr.com.khg.services.gateway.exception.DuplicateRouteException;
 import tr.com.khg.services.gateway.model.HeaderConfiguration;
-import tr.com.khg.services.gateway.model.request.HostPredication;
-import tr.com.khg.services.gateway.model.request.RemoteAddrPredication;
-import tr.com.khg.services.gateway.model.request.RouteRequest;
-import tr.com.khg.services.gateway.model.request.XForwardedRemoteAddrPredication;
+import tr.com.khg.services.gateway.model.request.*;
 import tr.com.khg.services.gateway.model.response.CookiePredicationResponse;
 import tr.com.khg.services.gateway.model.response.HeaderPredicationResponse;
 import tr.com.khg.services.gateway.model.response.HostPredicationResponse;
+import tr.com.khg.services.gateway.model.response.PredicationsResponse;
 import tr.com.khg.services.gateway.model.response.QueryPredicationResponse;
 import tr.com.khg.services.gateway.model.response.RemoteAddrPredicationResponse;
 import tr.com.khg.services.gateway.model.response.RouteResponse;
@@ -246,42 +244,42 @@ public class RouteService {
       route.setRouteHeaderConfigurations(headerConfigurations);
     }
 
-    if (request.getCookiePredications() != null && !request.getCookiePredications().isEmpty()) {
-      List<RouteCookiePredication> cookiePredications = createCookiePredications(request, route);
+    Predications p = request.getPredications();
+
+    if (p.getCookies() != null && !p.getCookies().isEmpty()) {
+      List<RouteCookiePredication> cookiePredications = createCookiePredications(p, route);
       route.setRouteCookiePredications(cookiePredications);
     }
 
-    if (request.getHeaderPredications() != null && !request.getHeaderPredications().isEmpty()) {
-      List<RouteHeaderPredication> headerPredications = createHeaderPredications(request, route);
+    if (p.getHeaders() != null && !p.getHeaders().isEmpty()) {
+      List<RouteHeaderPredication> headerPredications = createHeaderPredications(p, route);
       route.setRouteHeaderPredications(headerPredications);
     }
 
-    if (request.getHostPredications() != null && !request.getHostPredications().isEmpty()) {
-      List<RouteHostPredication> hostPredications = createHostPredications(request, route);
+    if (p.getHosts() != null && !p.getHosts().isEmpty()) {
+      List<RouteHostPredication> hostPredications = createHostPredications(p, route);
       route.setRouteHostPredications(hostPredications);
     }
 
-    if (request.getQueryPredications() != null && !request.getQueryPredications().isEmpty()) {
-      List<RouteQueryPredication> queryPredications = createQueryPredications(request, route);
+    if (p.getQueries() != null && !p.getQueries().isEmpty()) {
+      List<RouteQueryPredication> queryPredications = createQueryPredications(p, route);
       route.setRouteQueryPredications(queryPredications);
     }
 
-    if (request.getRemoteAddrPredications() != null
-        && !request.getRemoteAddrPredications().isEmpty()) {
+    if (p.getRemoteAddresses() != null && !p.getRemoteAddresses().isEmpty()) {
       List<RouteRemoteAddrPredication> remoteAddrPredications =
-          createRemoteAddrPredications(request, route);
+          createRemoteAddrPredications(p, route);
       route.setRouteRemoteAddrPredications(remoteAddrPredications);
     }
 
-    if (request.getWeightPredications() != null && !request.getWeightPredications().isEmpty()) {
-      List<RouteWeightPredication> weightPredications = createWeightPredications(request, route);
+    if (p.getWeights() != null && !p.getWeights().isEmpty()) {
+      List<RouteWeightPredication> weightPredications = createWeightPredications(p, route);
       route.setRouteWeightPredications(weightPredications);
     }
 
-    if (request.getXForwardedRemoteAddrPredications() != null
-        && !request.getXForwardedRemoteAddrPredications().isEmpty()) {
+    if (p.getXforwardedRemoteAddresses() != null && !p.getXforwardedRemoteAddresses().isEmpty()) {
       List<RouteXForwardedRemoteAddrPredication> xForwardedRemoteAddrPredications =
-          createXForwardedRemoteAddrPredications(request, route);
+          createXForwardedRemoteAddrPredications(p, route);
       route.setRouteXForwardedRemoteAddrPredications(xForwardedRemoteAddrPredications);
     }
 
@@ -323,16 +321,16 @@ public class RouteService {
     weightPredicationRepository.deleteByRoute(existingRoute);
     forwardedAddrPredicationRepository.deleteByRoute(existingRoute);
 
+    Predications p = request.getPredications();
     existingRoute.setRouteHeaderConfigurations(createHeaderConfigurations(request, existingRoute));
-    existingRoute.setRouteCookiePredications(createCookiePredications(request, existingRoute));
-    existingRoute.setRouteHeaderPredications(createHeaderPredications(request, existingRoute));
-    existingRoute.setRouteHostPredications(createHostPredications(request, existingRoute));
-    existingRoute.setRouteQueryPredications(createQueryPredications(request, existingRoute));
-    existingRoute.setRouteRemoteAddrPredications(
-        createRemoteAddrPredications(request, existingRoute));
-    existingRoute.setRouteWeightPredications(createWeightPredications(request, existingRoute));
+    existingRoute.setRouteCookiePredications(createCookiePredications(p, existingRoute));
+    existingRoute.setRouteHeaderPredications(createHeaderPredications(p, existingRoute));
+    existingRoute.setRouteHostPredications(createHostPredications(p, existingRoute));
+    existingRoute.setRouteQueryPredications(createQueryPredications(p, existingRoute));
+    existingRoute.setRouteRemoteAddrPredications(createRemoteAddrPredications(p, existingRoute));
+    existingRoute.setRouteWeightPredications(createWeightPredications(p, existingRoute));
     existingRoute.setRouteXForwardedRemoteAddrPredications(
-        createXForwardedRemoteAddrPredications(request, existingRoute));
+        createXForwardedRemoteAddrPredications(p, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -361,9 +359,11 @@ public class RouteService {
           definitionUtils.createPredicateDefinition(BEFORE, request.getExpirationTime()));
     }
 
-    if (request.getCookiePredications() != null && !request.getCookiePredications().isEmpty()) {
+    if (request.getPredications().getCookies() != null
+        && !request.getPredications().getCookies().isEmpty()) {
       request
-          .getCookiePredications()
+          .getPredications()
+          .getCookies()
           .forEach(
               cookiePredication ->
                   predicates.add(
@@ -371,9 +371,11 @@ public class RouteService {
                           COOKIE, cookiePredication.getName(), cookiePredication.getRegexp())));
     }
 
-    if (request.getHeaderPredications() != null && !request.getHeaderPredications().isEmpty()) {
+    if (request.getPredications().getHeaders() != null
+        && !request.getPredications().getHeaders().isEmpty()) {
       request
-          .getHeaderPredications()
+          .getPredications()
+          .getHeaders()
           .forEach(
               headerPredication ->
                   predicates.add(
@@ -381,17 +383,20 @@ public class RouteService {
                           HEADER, headerPredication.getName(), headerPredication.getRegexp())));
     }
 
-    if (request.getHostPredications() != null && !request.getHostPredications().isEmpty()) {
+    if (request.getPredications().getHosts() != null
+        && !request.getPredications().getHosts().isEmpty()) {
       String hostPatterns =
-          request.getHostPredications().stream()
+          request.getPredications().getHosts().stream()
               .map(HostPredication::getPattern)
               .collect(Collectors.joining(","));
       predicates.add(definitionUtils.createPredicateDefinition(HOST, hostPatterns));
     }
 
-    if (request.getQueryPredications() != null && !request.getQueryPredications().isEmpty()) {
+    if (request.getPredications().getQueries() != null
+        && !request.getPredications().getQueries().isEmpty()) {
       request
-          .getQueryPredications()
+          .getPredications()
+          .getQueries()
           .forEach(
               queryPredication -> {
                 String regexp =
@@ -405,18 +410,20 @@ public class RouteService {
               });
     }
 
-    if (request.getRemoteAddrPredications() != null
-        && !request.getRemoteAddrPredications().isEmpty()) {
+    if (request.getPredications().getRemoteAddresses() != null
+        && !request.getPredications().getRemoteAddresses().isEmpty()) {
       String sources =
-          request.getRemoteAddrPredications().stream()
+          request.getPredications().getRemoteAddresses().stream()
               .map(RemoteAddrPredication::getSource)
               .collect(Collectors.joining(","));
       predicates.add(definitionUtils.createPredicateDefinition(REMOTE_ADDR, sources));
     }
 
-    if (request.getWeightPredications() != null && !request.getWeightPredications().isEmpty()) {
+    if (request.getPredications().getWeights() != null
+        && !request.getPredications().getWeights().isEmpty()) {
       request
-          .getWeightPredications()
+          .getPredications()
+          .getWeights()
           .forEach(
               weightPredication -> {
                 predicates.add(
@@ -427,10 +434,10 @@ public class RouteService {
               });
     }
 
-    if (request.getXForwardedRemoteAddrPredications() != null
-        && !request.getXForwardedRemoteAddrPredications().isEmpty()) {
+    if (request.getPredications().getXforwardedRemoteAddresses() != null
+        && !request.getPredications().getXforwardedRemoteAddresses().isEmpty()) {
       String sources =
-          request.getXForwardedRemoteAddrPredications().stream()
+          request.getPredications().getXforwardedRemoteAddresses().stream()
               .map(XForwardedRemoteAddrPredication::getSource)
               .collect(Collectors.joining(","));
       predicates.add(definitionUtils.createPredicateDefinition(X_FORWARDED_REMOTE_ADDR, sources));
@@ -492,12 +499,12 @@ public class RouteService {
         .toList();
   }
 
-  private List<RouteCookiePredication> createCookiePredications(RouteRequest request, Route route) {
-    if (request.getCookiePredications() == null) {
+  private List<RouteCookiePredication> createCookiePredications(Predications p, Route route) {
+    if (p.getCookies() == null) {
       return new ArrayList<>();
     }
 
-    return request.getCookiePredications().stream()
+    return p.getCookies().stream()
         .map(
             cookiePredication ->
                 RouteCookiePredication.builder()
@@ -508,12 +515,12 @@ public class RouteService {
         .toList();
   }
 
-  private List<RouteHeaderPredication> createHeaderPredications(RouteRequest request, Route route) {
-    if (request.getHeaderPredications() == null) {
+  private List<RouteHeaderPredication> createHeaderPredications(Predications p, Route route) {
+    if (p.getHeaders() == null) {
       return new ArrayList<>();
     }
 
-    return request.getHeaderPredications().stream()
+    return p.getHeaders().stream()
         .map(
             headerPredication ->
                 RouteHeaderPredication.builder()
@@ -524,12 +531,12 @@ public class RouteService {
         .toList();
   }
 
-  private List<RouteHostPredication> createHostPredications(RouteRequest request, Route route) {
-    if (request.getHostPredications() == null) {
+  private List<RouteHostPredication> createHostPredications(Predications p, Route route) {
+    if (p.getHosts() == null) {
       return new ArrayList<>();
     }
 
-    return request.getHostPredications().stream()
+    return p.getHosts().stream()
         .map(
             hostPredication ->
                 RouteHostPredication.builder()
@@ -539,12 +546,12 @@ public class RouteService {
         .toList();
   }
 
-  private List<RouteQueryPredication> createQueryPredications(RouteRequest request, Route route) {
-    if (request.getQueryPredications() == null) {
+  private List<RouteQueryPredication> createQueryPredications(Predications p, Route route) {
+    if (p.getQueries() == null) {
       return new ArrayList<>();
     }
 
-    return request.getQueryPredications().stream()
+    return p.getQueries().stream()
         .map(
             queryPredication ->
                 RouteQueryPredication.builder()
@@ -559,12 +566,12 @@ public class RouteService {
   }
 
   private List<RouteRemoteAddrPredication> createRemoteAddrPredications(
-      RouteRequest request, Route route) {
-    if (request.getRemoteAddrPredications() == null) {
+      Predications p, Route route) {
+    if (p.getRemoteAddresses() == null) {
       return new ArrayList<>();
     }
 
-    return request.getRemoteAddrPredications().stream()
+    return p.getRemoteAddresses().stream()
         .map(
             remoteAddrPredication ->
                 RouteRemoteAddrPredication.builder()
@@ -574,12 +581,12 @@ public class RouteService {
         .toList();
   }
 
-  private List<RouteWeightPredication> createWeightPredications(RouteRequest request, Route route) {
-    if (request.getWeightPredications() == null) {
+  private List<RouteWeightPredication> createWeightPredications(Predications p, Route route) {
+    if (p.getWeights() == null) {
       return new ArrayList<>();
     }
 
-    return request.getWeightPredications().stream()
+    return p.getWeights().stream()
         .map(
             weightPredication ->
                 RouteWeightPredication.builder()
@@ -591,12 +598,12 @@ public class RouteService {
   }
 
   private List<RouteXForwardedRemoteAddrPredication> createXForwardedRemoteAddrPredications(
-      RouteRequest request, Route route) {
-    if (request.getXForwardedRemoteAddrPredications() == null) {
+      Predications p, Route route) {
+    if (p.getXforwardedRemoteAddresses() == null) {
       return new ArrayList<>();
     }
 
-    return request.getXForwardedRemoteAddrPredications().stream()
+    return p.getXforwardedRemoteAddresses().stream()
         .map(
             predication ->
                 RouteXForwardedRemoteAddrPredication.builder()
@@ -744,13 +751,16 @@ public class RouteService {
         .headers(headerConfigurations)
         .activationTime(route.getActivationTime())
         .expirationTime(route.getExpirationTime())
-        .cookiePredications(cookiePredicationResponses)
-        .headerPredications(headerPredicationResponses)
-        .hostPredications(hostPredicationResponses)
-        .queryPredications(queryPredicationResponses)
-        .remoteAddrPredications(remoteAddrPredicationResponses)
-        .weightPredications(weightPredicationResponses)
-        .xForwardedRemoteAddrPredications(xForwardedRemoteAddrPredicationResponses)
+        .predications(
+            PredicationsResponse.builder()
+                .cookies(cookiePredicationResponses)
+                .headers(headerPredicationResponses)
+                .hosts(hostPredicationResponses)
+                .queries(queryPredicationResponses)
+                .remoteAddresses(remoteAddrPredicationResponses)
+                .weights(weightPredicationResponses)
+                .xforwardedRemoteAddresses(xForwardedRemoteAddrPredicationResponses)
+                .build())
         .build();
   }
 }

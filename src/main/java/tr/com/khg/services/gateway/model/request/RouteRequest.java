@@ -31,18 +31,5 @@ public class RouteRequest {
   @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
   private ZonedDateTime expirationTime;
 
-  private List<CookiePredication> cookiePredications;
-
-  private List<HeaderPredication> headerPredications;
-
-  private List<HostPredication> hostPredications;
-
-  private List<QueryPredication> queryPredications;
-
-  private List<RemoteAddrPredication> remoteAddrPredications;
-
-  private List<WeightPredication> weightPredications;
-
-  @JsonProperty("xForwardedRemoteAddrPredications")
-  private List<XForwardedRemoteAddrPredication> xForwardedRemoteAddrPredications;
+  private Predications predications;
 }
