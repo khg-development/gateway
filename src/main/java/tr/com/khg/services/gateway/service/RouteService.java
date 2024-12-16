@@ -54,6 +54,7 @@ import tr.com.khg.services.gateway.repository.RouteRepository;
 import tr.com.khg.services.gateway.repository.RouteWeightPredicationRepository;
 import tr.com.khg.services.gateway.repository.RouteXForwardedRemoteAddrPredicationRepository;
 import tr.com.khg.services.gateway.utils.DefinitionUtils;
+import tr.com.khg.services.gateway.utils.PredicationUtils;
 
 @Slf4j
 @Service
@@ -75,6 +76,7 @@ public class RouteService {
   private final RouteRemoteAddrPredicationRepository remoteAddrPredicationRepository;
   private final RouteWeightPredicationRepository weightPredicationRepository;
   private final RouteXForwardedRemoteAddrPredicationRepository forwardedAddrPredicationRepository;
+  private final PredicationUtils predicationUtils;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -154,13 +156,6 @@ public class RouteService {
         .doOnNext(
             response ->
                 log.debug("Found {} routes for proxy: {}", response.getRoutes().size(), proxyName));
-  }
-
-  @Transactional(readOnly = true)
-  public Mono<RouteResponse> getRoute(String proxyName, String routeId) {
-    return Mono.fromCallable(() -> findRouteByProxyAndRouteId(proxyName, routeId))
-        .map(this::mapToRouteResponse)
-        .subscribeOn(Schedulers.boundedElastic());
   }
 
   @Transactional
@@ -247,39 +242,44 @@ public class RouteService {
     Predications p = request.getPredications();
 
     if (p.getCookies() != null && !p.getCookies().isEmpty()) {
-      List<RouteCookiePredication> cookiePredications = createCookiePredications(p, route);
+      List<RouteCookiePredication> cookiePredications =
+          predicationUtils.createCookiePredications(p, route);
       route.setRouteCookiePredications(cookiePredications);
     }
 
     if (p.getHeaders() != null && !p.getHeaders().isEmpty()) {
-      List<RouteHeaderPredication> headerPredications = createHeaderPredications(p, route);
+      List<RouteHeaderPredication> headerPredications =
+          predicationUtils.createHeaderPredications(p, route);
       route.setRouteHeaderPredications(headerPredications);
     }
 
     if (p.getHosts() != null && !p.getHosts().isEmpty()) {
-      List<RouteHostPredication> hostPredications = createHostPredications(p, route);
+      List<RouteHostPredication> hostPredications =
+          predicationUtils.createHostPredications(p, route);
       route.setRouteHostPredications(hostPredications);
     }
 
     if (p.getQueries() != null && !p.getQueries().isEmpty()) {
-      List<RouteQueryPredication> queryPredications = createQueryPredications(p, route);
+      List<RouteQueryPredication> queryPredications =
+          predicationUtils.createQueryPredications(p, route);
       route.setRouteQueryPredications(queryPredications);
     }
 
     if (p.getRemoteAddresses() != null && !p.getRemoteAddresses().isEmpty()) {
       List<RouteRemoteAddrPredication> remoteAddrPredications =
-          createRemoteAddrPredications(p, route);
+          predicationUtils.createRemoteAddrPredications(p, route);
       route.setRouteRemoteAddrPredications(remoteAddrPredications);
     }
 
     if (p.getWeights() != null && !p.getWeights().isEmpty()) {
-      List<RouteWeightPredication> weightPredications = createWeightPredications(p, route);
+      List<RouteWeightPredication> weightPredications =
+          predicationUtils.createWeightPredications(p, route);
       route.setRouteWeightPredications(weightPredications);
     }
 
     if (p.getXforwardedRemoteAddresses() != null && !p.getXforwardedRemoteAddresses().isEmpty()) {
       List<RouteXForwardedRemoteAddrPredication> xForwardedRemoteAddrPredications =
-          createXForwardedRemoteAddrPredications(p, route);
+          predicationUtils.createXForwardedRemoteAddrPredications(p, route);
       route.setRouteXForwardedRemoteAddrPredications(xForwardedRemoteAddrPredications);
     }
 
@@ -323,14 +323,20 @@ public class RouteService {
 
     Predications p = request.getPredications();
     existingRoute.setRouteHeaderConfigurations(createHeaderConfigurations(request, existingRoute));
-    existingRoute.setRouteCookiePredications(createCookiePredications(p, existingRoute));
-    existingRoute.setRouteHeaderPredications(createHeaderPredications(p, existingRoute));
-    existingRoute.setRouteHostPredications(createHostPredications(p, existingRoute));
-    existingRoute.setRouteQueryPredications(createQueryPredications(p, existingRoute));
-    existingRoute.setRouteRemoteAddrPredications(createRemoteAddrPredications(p, existingRoute));
-    existingRoute.setRouteWeightPredications(createWeightPredications(p, existingRoute));
+    existingRoute.setRouteCookiePredications(
+        predicationUtils.createCookiePredications(p, existingRoute));
+    existingRoute.setRouteHeaderPredications(
+        predicationUtils.createHeaderPredications(p, existingRoute));
+    existingRoute.setRouteHostPredications(
+        predicationUtils.createHostPredications(p, existingRoute));
+    existingRoute.setRouteQueryPredications(
+        predicationUtils.createQueryPredications(p, existingRoute));
+    existingRoute.setRouteRemoteAddrPredications(
+        predicationUtils.createRemoteAddrPredications(p, existingRoute));
+    existingRoute.setRouteWeightPredications(
+        predicationUtils.createWeightPredications(p, existingRoute));
     existingRoute.setRouteXForwardedRemoteAddrPredications(
-        createXForwardedRemoteAddrPredications(p, existingRoute));
+        predicationUtils.createXForwardedRemoteAddrPredications(p, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -494,120 +500,6 @@ public class RouteService {
                     .key(headerConfiguration.getKey())
                     .value(headerConfiguration.getValue())
                     .type(headerConfiguration.getType())
-                    .route(route)
-                    .build())
-        .toList();
-  }
-
-  private List<RouteCookiePredication> createCookiePredications(Predications p, Route route) {
-    if (p.getCookies() == null) {
-      return new ArrayList<>();
-    }
-
-    return p.getCookies().stream()
-        .map(
-            cookiePredication ->
-                RouteCookiePredication.builder()
-                    .name(cookiePredication.getName())
-                    .regexp(cookiePredication.getRegexp())
-                    .route(route)
-                    .build())
-        .toList();
-  }
-
-  private List<RouteHeaderPredication> createHeaderPredications(Predications p, Route route) {
-    if (p.getHeaders() == null) {
-      return new ArrayList<>();
-    }
-
-    return p.getHeaders().stream()
-        .map(
-            headerPredication ->
-                RouteHeaderPredication.builder()
-                    .name(headerPredication.getName())
-                    .regexp(headerPredication.getRegexp())
-                    .route(route)
-                    .build())
-        .toList();
-  }
-
-  private List<RouteHostPredication> createHostPredications(Predications p, Route route) {
-    if (p.getHosts() == null) {
-      return new ArrayList<>();
-    }
-
-    return p.getHosts().stream()
-        .map(
-            hostPredication ->
-                RouteHostPredication.builder()
-                    .pattern(hostPredication.getPattern())
-                    .route(route)
-                    .build())
-        .toList();
-  }
-
-  private List<RouteQueryPredication> createQueryPredications(Predications p, Route route) {
-    if (p.getQueries() == null) {
-      return new ArrayList<>();
-    }
-
-    return p.getQueries().stream()
-        .map(
-            queryPredication ->
-                RouteQueryPredication.builder()
-                    .param(queryPredication.getParam())
-                    .regexp(
-                        queryPredication.getRegexp() != null
-                            ? queryPredication.getRegexp()
-                            : DEFAULT_REGEX)
-                    .route(route)
-                    .build())
-        .toList();
-  }
-
-  private List<RouteRemoteAddrPredication> createRemoteAddrPredications(
-      Predications p, Route route) {
-    if (p.getRemoteAddresses() == null) {
-      return new ArrayList<>();
-    }
-
-    return p.getRemoteAddresses().stream()
-        .map(
-            remoteAddrPredication ->
-                RouteRemoteAddrPredication.builder()
-                    .source(remoteAddrPredication.getSource())
-                    .route(route)
-                    .build())
-        .toList();
-  }
-
-  private List<RouteWeightPredication> createWeightPredications(Predications p, Route route) {
-    if (p.getWeights() == null) {
-      return new ArrayList<>();
-    }
-
-    return p.getWeights().stream()
-        .map(
-            weightPredication ->
-                RouteWeightPredication.builder()
-                    .group(weightPredication.getGroup())
-                    .weight(weightPredication.getWeight())
-                    .route(route)
-                    .build())
-        .toList();
-  }
-
-  private List<RouteXForwardedRemoteAddrPredication> createXForwardedRemoteAddrPredications(
-      Predications p, Route route) {
-    if (p.getXforwardedRemoteAddresses() == null) {
-      return new ArrayList<>();
-    }
-
-    return p.getXforwardedRemoteAddresses().stream()
-        .map(
-            predication ->
-                RouteXForwardedRemoteAddrPredication.builder()
-                    .source(predication.getSource())
                     .route(route)
                     .build())
         .toList();

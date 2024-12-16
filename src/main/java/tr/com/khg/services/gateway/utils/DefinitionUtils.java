@@ -37,7 +37,7 @@ public class DefinitionUtils {
 
   public FilterDefinition createHeaderFilterDefinition(FilterType filterType, String... args) {
     FilterDefinition headerFilter = new FilterDefinition();
-    headerFilter.setName(filterType.getFilterName());
+    headerFilter.setName(filterType.getType());
     Map<String, String> arguments = new HashMap<>();
     for (int i = 0; i < args.length; i++) {
       arguments.put("_genkey_" + i, args[i]);
