@@ -69,9 +69,6 @@ public class Route implements Serializable {
   private ZonedDateTime expirationTime;
 
   @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-  private List<RouteHeaderConfiguration> routeHeaderConfigurations = new ArrayList<>();
-
-  @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
   private List<RouteCookiePredication> routeCookiePredications = new ArrayList<>();
 
   @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
@@ -92,4 +89,14 @@ public class Route implements Serializable {
   @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
   private List<RouteXForwardedRemoteAddrPredication> routeXForwardedRemoteAddrPredications =
       new ArrayList<>();
+
+  public void clearPredications() {
+    routeCookiePredications.clear();
+    routeHeaderPredications.clear();
+    routeHostPredications.clear();
+    routeQueryPredications.clear();
+    routeRemoteAddrPredications.clear();
+    routeWeightPredications.clear();
+    routeXForwardedRemoteAddrPredications.clear();
+  }
 }
