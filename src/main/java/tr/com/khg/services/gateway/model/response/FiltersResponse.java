@@ -14,4 +14,5 @@ public class FiltersResponse {
   private List<AddRequestHeaderFilterResponse> addRequestHeaders;
   private List<AddRequestHeaderIfNotPresentFilterResponse> addRequestHeadersIfNotPresent;
   private List<AddRequestParameterFilterResponse> addRequestParameters;
+  private List<AddResponseHeaderFilterResponse> addResponseHeaders;
 }

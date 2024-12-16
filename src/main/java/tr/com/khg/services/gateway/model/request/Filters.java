@@ -8,4 +8,5 @@ public class Filters {
   private List<AddRequestHeaderFilter> addRequestHeaders;
   private List<AddRequestHeaderIfNotPresentFilterRequest> addRequestHeadersIfNotPresent;
   private List<AddRequestParameterFilter> addRequestParameters;
+  private List<AddResponseHeaderFilter> addResponseHeaders;
 }

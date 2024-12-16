@@ -53,6 +53,7 @@ public class RouteService {
   private final RouteAddRequestHeaderIfNotPresentFilterRepository
       addRequestHeaderIfNotPresentFilterRepository;
   private final RouteAddRequestParameterFilterRepository addRequestParameterFilterRepository;
+  private final RouteAddResponseHeaderFilterRepository addResponseHeaderFilterRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -206,6 +207,7 @@ public class RouteService {
             .routeAddRequestHeaderFilters(new ArrayList<>())
             .routeAddRequestHeaderIfNotPresentFilters(new ArrayList<>())
             .routeAddRequestParameterFilters(new ArrayList<>())
+            .routeAddResponseHeaderFilters(new ArrayList<>())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -275,6 +277,12 @@ public class RouteService {
       route.setRouteAddRequestParameterFilters(filters);
     }
 
+    if (f != null && f.getAddResponseHeaders() != null) {
+      List<RouteAddResponseHeaderFilter> filters =
+          filterUtils.createAddResponseHeaderFilters(f, route);
+      route.setRouteAddResponseHeaderFilters(filters);
+    }
+
     return route;
   }
 
@@ -308,6 +316,7 @@ public class RouteService {
     addRequestHeaderFilterRepository.deleteByRoute(existingRoute);
     addRequestHeaderIfNotPresentFilterRepository.deleteByRoute(existingRoute);
     addRequestParameterFilterRepository.deleteByRoute(existingRoute);
+    addResponseHeaderFilterRepository.deleteByRoute(existingRoute);
 
     Predications p = request.getPredications();
     existingRoute.setRouteCookiePredications(
@@ -332,6 +341,8 @@ public class RouteService {
         filterUtils.createAddRequestHeaderIfNotPresentFilters(f, existingRoute));
     existingRoute.setRouteAddRequestParameterFilters(
         filterUtils.createAddRequestParameterFilters(f, existingRoute));
+    existingRoute.setRouteAddResponseHeaderFilters(
+        filterUtils.createAddResponseHeaderFilters(f, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -482,6 +493,20 @@ public class RouteService {
                 FilterDefinition filterDefinition =
                     definitionUtils.createFilterDefinition(
                         ADD_REQUEST_PARAMETER, filter.getName(), filter.getValue());
+                filters.add(filterDefinition);
+              });
+    }
+
+    if (request.getFilters().getAddResponseHeaders() != null
+        && !request.getFilters().getAddResponseHeaders().isEmpty()) {
+      request
+          .getFilters()
+          .getAddResponseHeaders()
+          .forEach(
+              filter -> {
+                FilterDefinition filterDefinition =
+                    definitionUtils.createFilterDefinition(
+                        ADD_RESPONSE_HEADER, filter.getName(), filter.getValue());
                 filters.add(filterDefinition);
               });
     }
@@ -645,6 +670,19 @@ public class RouteService {
               .toList();
     }
 
+    List<AddResponseHeaderFilterResponse> addResponseHeaderResponses = new ArrayList<>();
+    if (route.getRouteAddResponseHeaderFilters() != null) {
+      addResponseHeaderResponses =
+          route.getRouteAddResponseHeaderFilters().stream()
+              .map(
+                  filter ->
+                      AddResponseHeaderFilterResponse.builder()
+                          .name(filter.getName())
+                          .value(filter.getValue())
+                          .build())
+              .toList();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -668,6 +706,7 @@ public class RouteService {
                 .addRequestHeaders(addRequestHeaderResponses)
                 .addRequestHeadersIfNotPresent(addRequestHeaderIfNotPresentResponses)
                 .addRequestParameters(addRequestParameterResponses)
+                .addResponseHeaders(addResponseHeaderResponses)
                 .build())
         .build();
   }
