@@ -52,6 +52,7 @@ public class RouteService {
   private final RouteAddRequestHeaderFilterRepository addRequestHeaderFilterRepository;
   private final RouteAddRequestHeaderIfNotPresentFilterRepository
       addRequestHeaderIfNotPresentFilterRepository;
+  private final RouteAddRequestParameterFilterRepository addRequestParameterFilterRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -204,6 +205,7 @@ public class RouteService {
             .routeXForwardedRemoteAddrPredications(new ArrayList<>())
             .routeAddRequestHeaderFilters(new ArrayList<>())
             .routeAddRequestHeaderIfNotPresentFilters(new ArrayList<>())
+            .routeAddRequestParameterFilters(new ArrayList<>())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -267,6 +269,12 @@ public class RouteService {
       route.setRouteAddRequestHeaderIfNotPresentFilters(filters);
     }
 
+    if (f != null && f.getAddRequestParameters() != null) {
+      List<RouteAddRequestParameterFilter> filters =
+          filterUtils.createAddRequestParameterFilters(f, route);
+      route.setRouteAddRequestParameterFilters(filters);
+    }
+
     return route;
   }
 
@@ -299,6 +307,7 @@ public class RouteService {
     forwardedAddrPredicationRepository.deleteByRoute(existingRoute);
     addRequestHeaderFilterRepository.deleteByRoute(existingRoute);
     addRequestHeaderIfNotPresentFilterRepository.deleteByRoute(existingRoute);
+    addRequestParameterFilterRepository.deleteByRoute(existingRoute);
 
     Predications p = request.getPredications();
     existingRoute.setRouteCookiePredications(
@@ -321,6 +330,8 @@ public class RouteService {
         filterUtils.createAddRequestHeaderFilters(f, existingRoute));
     existingRoute.setRouteAddRequestHeaderIfNotPresentFilters(
         filterUtils.createAddRequestHeaderIfNotPresentFilters(f, existingRoute));
+    existingRoute.setRouteAddRequestParameterFilters(
+        filterUtils.createAddRequestParameterFilters(f, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -459,6 +470,20 @@ public class RouteService {
               .map(f -> String.join(":", f.getName(), f.getValue()))
               .collect(Collectors.joining(","));
       filters.add(definitionUtils.createFilterDefinition(ADD_REQUEST_HEADER_IF_NOT_PRESENT, value));
+    }
+
+    if (request.getFilters().getAddRequestParameters() != null
+        && !request.getFilters().getAddRequestParameters().isEmpty()) {
+      request
+          .getFilters()
+          .getAddRequestParameters()
+          .forEach(
+              filter -> {
+                FilterDefinition filterDefinition =
+                    definitionUtils.createFilterDefinition(
+                        ADD_REQUEST_PARAMETER, filter.getName(), filter.getValue());
+                filters.add(filterDefinition);
+              });
     }
 
     routeDefinition.setPredicates(predicates);
@@ -607,6 +632,19 @@ public class RouteService {
               .toList();
     }
 
+    List<AddRequestParameterFilterResponse> addRequestParameterResponses = new ArrayList<>();
+    if (route.getRouteAddRequestParameterFilters() != null) {
+      addRequestParameterResponses =
+          route.getRouteAddRequestParameterFilters().stream()
+              .map(
+                  filter ->
+                      AddRequestParameterFilterResponse.builder()
+                          .name(filter.getName())
+                          .value(filter.getValue())
+                          .build())
+              .toList();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -629,6 +667,7 @@ public class RouteService {
             FiltersResponse.builder()
                 .addRequestHeaders(addRequestHeaderResponses)
                 .addRequestHeadersIfNotPresent(addRequestHeaderIfNotPresentResponses)
+                .addRequestParameters(addRequestParameterResponses)
                 .build())
         .build();
   }

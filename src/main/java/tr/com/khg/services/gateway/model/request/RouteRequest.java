@@ -26,7 +26,7 @@ public class RouteRequest {
   @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
   private ZonedDateTime expirationTime;
 
-  private Predications predications;
+  private Predications predications = new Predications();
 
-  private Filters filters;
+  private Filters filters = new Filters();
 }

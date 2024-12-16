@@ -13,4 +13,5 @@ import lombok.NoArgsConstructor;
 public class FiltersResponse {
   private List<AddRequestHeaderFilterResponse> addRequestHeaders;
   private List<AddRequestHeaderIfNotPresentFilterResponse> addRequestHeadersIfNotPresent;
+  private List<AddRequestParameterFilterResponse> addRequestParameters;
 }

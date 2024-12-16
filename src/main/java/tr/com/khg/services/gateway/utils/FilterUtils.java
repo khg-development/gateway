@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import tr.com.khg.services.gateway.entity.Route;
 import tr.com.khg.services.gateway.entity.RouteAddRequestHeaderFilter;
 import tr.com.khg.services.gateway.entity.RouteAddRequestHeaderIfNotPresentFilter;
+import tr.com.khg.services.gateway.entity.RouteAddRequestParameterFilter;
 import tr.com.khg.services.gateway.model.request.Filters;
 
 @Component
@@ -44,6 +45,21 @@ public class FilterUtils {
                     .value(filter.getValue())
                     .route(route)
                     .build())
+        .toList();
+  }
+
+  public List<RouteAddRequestParameterFilter> createAddRequestParameterFilters(
+      Filters filters, Route route) {
+    if (filters == null || filters.getAddRequestParameters() == null) {
+      return new ArrayList<>();
+    }
+
+    return filters.getAddRequestParameters().stream()
+        .map(filter -> RouteAddRequestParameterFilter.builder()
+            .name(filter.getName())
+            .value(filter.getValue())
+            .route(route)
+            .build())
         .toList();
   }
 }
