@@ -465,16 +465,20 @@ public class RouteService {
               });
     }
 
-    if (request.getFilters().getCircuitBreaker() != null
-        && !request.getFilters().getCircuitBreaker().isEmpty()) {
+    if (request.getFilters().getCircuitBreakers() != null
+        && !request.getFilters().getCircuitBreakers().isEmpty()) {
       request
           .getFilters()
-          .getCircuitBreaker()
+          .getCircuitBreakers()
           .forEach(
               filter -> {
+                String statusCodes = null;
+                if (filter.getStatusCodes() != null && !filter.getStatusCodes().isEmpty()) {
+                  statusCodes = String.join(",", filter.getStatusCodes());
+                }
                 FilterDefinition filterDefinition =
                     definitionUtils.createFilterDefinition(
-                        CIRCUIT_BREAKER, filter.getName(), filter.getFallbackUri());
+                        CIRCUIT_BREAKER, filter.getName(), filter.getFallbackUri(), statusCodes);
                 filters.add(filterDefinition);
               });
     }
@@ -660,6 +664,10 @@ public class RouteService {
                       CircuitBreakerResponse.builder()
                           .name(filter.getName())
                           .fallbackUri(filter.getFallbackUri())
+                          .statusCodes(
+                              filter.getStatusCodes() != null
+                                  ? Arrays.asList(filter.getStatusCodes().split(","))
+                                  : null)
                           .build())
               .toList();
     }

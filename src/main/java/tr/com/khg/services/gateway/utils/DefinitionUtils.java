@@ -40,7 +40,11 @@ public class DefinitionUtils {
     headerFilter.setName(filterType.getType());
     Map<String, String> arguments = new HashMap<>();
     for (int i = 0; i < args.length; i++) {
-      arguments.put("_genkey_" + i, args[i]);
+      if (args[i] == null) {
+        continue;
+      }
+      String argName = filterType.getArgs().length > i ? filterType.getArgs()[i] : "_genkey_" + i;
+      arguments.put(argName, args[i]);
     }
     headerFilter.setArgs(arguments);
     return headerFilter;

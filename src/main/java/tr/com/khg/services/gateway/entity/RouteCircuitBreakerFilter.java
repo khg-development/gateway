@@ -9,7 +9,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "circuit_breaker_filter")
+@Table(name = "route_circuit_breaker_filter")
 public class RouteCircuitBreakerFilter {
 
   @Id
@@ -25,4 +25,7 @@ public class RouteCircuitBreakerFilter {
 
   @Column(name = "fallback_uri")
   private String fallbackUri;
+
+  @Column(name = "status_codes")
+  private String statusCodes;
 }

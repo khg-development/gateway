@@ -2,6 +2,7 @@ package tr.com.khg.services.gateway.utils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import tr.com.khg.services.gateway.entity.*;
@@ -80,18 +81,22 @@ public class FilterUtils {
   }
 
   public List<RouteCircuitBreakerFilter> createCircuitBreakerFilters(Filters filters, Route route) {
-    if (filters == null || filters.getCircuitBreaker() == null) {
+    if (filters == null || filters.getCircuitBreakers() == null) {
       return new ArrayList<>();
     }
 
-    return filters.getCircuitBreaker().stream()
+    return filters.getCircuitBreakers().stream()
         .map(
             filter ->
                 RouteCircuitBreakerFilter.builder()
+                    .route(route)
                     .name(filter.getName())
                     .fallbackUri(filter.getFallbackUri())
-                    .route(route)
+                    .statusCodes(
+                        filter.getStatusCodes() != null
+                            ? String.join(",", filter.getStatusCodes())
+                            : null)
                     .build())
-        .toList();
+        .collect(Collectors.toList());
   }
 }

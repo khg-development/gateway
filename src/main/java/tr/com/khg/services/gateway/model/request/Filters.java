@@ -9,5 +9,5 @@ public class Filters {
   private List<AddRequestHeaderIfNotPresentFilterRequest> addRequestHeadersIfNotPresent;
   private List<AddRequestParameterFilter> addRequestParameters;
   private List<AddResponseHeaderFilter> addResponseHeaders;
-  private List<CircuitBreakerRequest> circuitBreaker;
+  private List<CircuitBreakerRequest> circuitBreakers;
 }
