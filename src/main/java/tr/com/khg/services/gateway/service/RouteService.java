@@ -54,6 +54,7 @@ public class RouteService {
       addRequestHeaderIfNotPresentFilterRepository;
   private final RouteAddRequestParameterFilterRepository addRequestParameterFilterRepository;
   private final RouteAddResponseHeaderFilterRepository addResponseHeaderFilterRepository;
+  private final RouteCircuitBreakerFilterRepository circuitBreakerFilterRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -208,80 +209,30 @@ public class RouteService {
             .routeAddRequestHeaderIfNotPresentFilters(new ArrayList<>())
             .routeAddRequestParameterFilters(new ArrayList<>())
             .routeAddResponseHeaderFilters(new ArrayList<>())
+            .routeCircuitBreakerFilters(new ArrayList<>())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
     route.setRouteDefinition(routeDefinition);
 
     Predications p = request.getPredications();
-
-    if (p.getCookies() != null && !p.getCookies().isEmpty()) {
-      List<RouteCookiePredication> cookiePredications =
-          predicationUtils.createCookiePredications(p, route);
-      route.setRouteCookiePredications(cookiePredications);
-    }
-
-    if (p.getHeaders() != null && !p.getHeaders().isEmpty()) {
-      List<RouteHeaderPredication> headerPredications =
-          predicationUtils.createHeaderPredications(p, route);
-      route.setRouteHeaderPredications(headerPredications);
-    }
-
-    if (p.getHosts() != null && !p.getHosts().isEmpty()) {
-      List<RouteHostPredication> hostPredications =
-          predicationUtils.createHostPredications(p, route);
-      route.setRouteHostPredications(hostPredications);
-    }
-
-    if (p.getQueries() != null && !p.getQueries().isEmpty()) {
-      List<RouteQueryPredication> queryPredications =
-          predicationUtils.createQueryPredications(p, route);
-      route.setRouteQueryPredications(queryPredications);
-    }
-
-    if (p.getRemoteAddresses() != null && !p.getRemoteAddresses().isEmpty()) {
-      List<RouteRemoteAddrPredication> remoteAddrPredications =
-          predicationUtils.createRemoteAddrPredications(p, route);
-      route.setRouteRemoteAddrPredications(remoteAddrPredications);
-    }
-
-    if (p.getWeights() != null && !p.getWeights().isEmpty()) {
-      List<RouteWeightPredication> weightPredications =
-          predicationUtils.createWeightPredications(p, route);
-      route.setRouteWeightPredications(weightPredications);
-    }
-
-    if (p.getXforwardedRemoteAddresses() != null && !p.getXforwardedRemoteAddresses().isEmpty()) {
-      List<RouteXForwardedRemoteAddrPredication> xForwardedRemoteAddrPredications =
-          predicationUtils.createXForwardedRemoteAddrPredications(p, route);
-      route.setRouteXForwardedRemoteAddrPredications(xForwardedRemoteAddrPredications);
-    }
+    route.setRouteCookiePredications(predicationUtils.createCookiePredications(p, route));
+    route.setRouteHeaderPredications(predicationUtils.createHeaderPredications(p, route));
+    route.setRouteHostPredications(predicationUtils.createHostPredications(p, route));
+    route.setRouteQueryPredications(predicationUtils.createQueryPredications(p, route));
+    route.setRouteRemoteAddrPredications(predicationUtils.createRemoteAddrPredications(p, route));
+    route.setRouteWeightPredications(predicationUtils.createWeightPredications(p, route));
+    route.setRouteXForwardedRemoteAddrPredications(
+        predicationUtils.createXForwardedRemoteAddrPredications(p, route));
 
     Filters f = request.getFilters();
-
-    if (f != null && f.getAddRequestHeaders() != null) {
-      List<RouteAddRequestHeaderFilter> filters =
-          filterUtils.createAddRequestHeaderFilters(f, route);
-      route.setRouteAddRequestHeaderFilters(filters);
-    }
-
-    if (f != null && f.getAddRequestHeadersIfNotPresent() != null) {
-      List<RouteAddRequestHeaderIfNotPresentFilter> filters =
-          filterUtils.createAddRequestHeaderIfNotPresentFilters(f, route);
-      route.setRouteAddRequestHeaderIfNotPresentFilters(filters);
-    }
-
-    if (f != null && f.getAddRequestParameters() != null) {
-      List<RouteAddRequestParameterFilter> filters =
-          filterUtils.createAddRequestParameterFilters(f, route);
-      route.setRouteAddRequestParameterFilters(filters);
-    }
-
-    if (f != null && f.getAddResponseHeaders() != null) {
-      List<RouteAddResponseHeaderFilter> filters =
-          filterUtils.createAddResponseHeaderFilters(f, route);
-      route.setRouteAddResponseHeaderFilters(filters);
-    }
+    route.setRouteAddRequestHeaderFilters(filterUtils.createAddRequestHeaderFilters(f, route));
+    route.setRouteAddRequestHeaderIfNotPresentFilters(
+        filterUtils.createAddRequestHeaderIfNotPresentFilters(f, route));
+    route.setRouteAddRequestParameterFilters(
+        filterUtils.createAddRequestParameterFilters(f, route));
+    route.setRouteAddResponseHeaderFilters(filterUtils.createAddResponseHeaderFilters(f, route));
+    route.setRouteCircuitBreakerFilters(filterUtils.createCircuitBreakerFilters(f, route));
 
     return route;
   }
@@ -317,6 +268,7 @@ public class RouteService {
     addRequestHeaderIfNotPresentFilterRepository.deleteByRoute(existingRoute);
     addRequestParameterFilterRepository.deleteByRoute(existingRoute);
     addResponseHeaderFilterRepository.deleteByRoute(existingRoute);
+    circuitBreakerFilterRepository.deleteByRoute(existingRoute);
 
     Predications p = request.getPredications();
     existingRoute.setRouteCookiePredications(
@@ -343,6 +295,8 @@ public class RouteService {
         filterUtils.createAddRequestParameterFilters(f, existingRoute));
     existingRoute.setRouteAddResponseHeaderFilters(
         filterUtils.createAddResponseHeaderFilters(f, existingRoute));
+    existingRoute.setRouteCircuitBreakerFilters(
+        filterUtils.createCircuitBreakerFilters(f, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -507,6 +461,20 @@ public class RouteService {
                 FilterDefinition filterDefinition =
                     definitionUtils.createFilterDefinition(
                         ADD_RESPONSE_HEADER, filter.getName(), filter.getValue());
+                filters.add(filterDefinition);
+              });
+    }
+
+    if (request.getFilters().getCircuitBreaker() != null
+        && !request.getFilters().getCircuitBreaker().isEmpty()) {
+      request
+          .getFilters()
+          .getCircuitBreaker()
+          .forEach(
+              filter -> {
+                FilterDefinition filterDefinition =
+                    definitionUtils.createFilterDefinition(
+                        CIRCUIT_BREAKER, filter.getName(), filter.getFallbackUri());
                 filters.add(filterDefinition);
               });
     }
@@ -683,6 +651,19 @@ public class RouteService {
               .toList();
     }
 
+    List<CircuitBreakerResponse> circuitBreakerResponses = new ArrayList<>();
+    if (route.getRouteCircuitBreakerFilters() != null) {
+      circuitBreakerResponses =
+          route.getRouteCircuitBreakerFilters().stream()
+              .map(
+                  filter ->
+                      CircuitBreakerResponse.builder()
+                          .name(filter.getName())
+                          .fallbackUri(filter.getFallbackUri())
+                          .build())
+              .toList();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -707,6 +688,7 @@ public class RouteService {
                 .addRequestHeadersIfNotPresent(addRequestHeaderIfNotPresentResponses)
                 .addRequestParameters(addRequestParameterResponses)
                 .addResponseHeaders(addResponseHeaderResponses)
+                .circuitBreakers(circuitBreakerResponses)
                 .build())
         .build();
   }

@@ -4,11 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import tr.com.khg.services.gateway.entity.Route;
-import tr.com.khg.services.gateway.entity.RouteAddRequestHeaderFilter;
-import tr.com.khg.services.gateway.entity.RouteAddRequestHeaderIfNotPresentFilter;
-import tr.com.khg.services.gateway.entity.RouteAddRequestParameterFilter;
-import tr.com.khg.services.gateway.entity.RouteAddResponseHeaderFilter;
+import tr.com.khg.services.gateway.entity.*;
 import tr.com.khg.services.gateway.model.request.Filters;
 
 @Component
@@ -78,6 +74,22 @@ public class FilterUtils {
                 RouteAddResponseHeaderFilter.builder()
                     .name(filter.getName())
                     .value(filter.getValue())
+                    .route(route)
+                    .build())
+        .toList();
+  }
+
+  public List<RouteCircuitBreakerFilter> createCircuitBreakerFilters(Filters filters, Route route) {
+    if (filters == null || filters.getCircuitBreaker() == null) {
+      return new ArrayList<>();
+    }
+
+    return filters.getCircuitBreaker().stream()
+        .map(
+            filter ->
+                RouteCircuitBreakerFilter.builder()
+                    .name(filter.getName())
+                    .fallbackUri(filter.getFallbackUri())
                     .route(route)
                     .build())
         .toList();

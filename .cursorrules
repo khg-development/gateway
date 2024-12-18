@@ -17,12 +17,20 @@ Kod yerleşimi
 Gateway filter tanımlama
 - Spring Cloud Gateway ile filter tanımlama yapılacaktır.
 - Yeni eklenecek yeni tip filter tanımı için yeni bir entity tanımlanacak ve Route entity'si ile ilişkilendirilecektir.
+- Filter entity'nin adı RouteXFilter gibi olacaktır.
+- Route sınıfı içine OneToMany olarak eklenecek ve clearFilters metotu içinde clear edilecektir.
+- Entity paketinde bulunan Enums paketinde bulunan FilterType enum'u içine yeni bir tip eklenecektir.
 - Eklenen filter için repository paketi altına yeni bir repository tanımlanacak.
 - Repository içine deleteByRoute adında bir method tanımlanacak. Ve bu metot modifying ve transactional olacak.
 - Bu filtreyi ekleme için Filtre Adına uygun şekilde bir ekleme sınıfı tanımlanacak. Örneğin isim NewFilter gibi olacaktır.
 - Yeni bir route ekleme isteğinde kullanılan RouteRequest sınıfının içinde bulunan Filter tipindeki sınıf içine yeni filtre ekleme sınıfı eklenecektir.
-- Listeleme için Filter Response sınıfı oluşturulacak. RouteResponse sınıfının içinde bulunan FilterResponse tipindeki sınıf içine yeni filtre listeme sınıfı eklenecektir.
-- Service içinde route ekleme ve güncelleme metotları içine yeni eklenen filtreyi diğer filtrelerde oluduğu gibi ekleme işlemi ve güncelleme işlemini yapılacak şekilde güncellenecektir.
+- Listeleme için Filter Response sınıfı oluşturulacak. RouteResponse sınıfının içinde bulunan FiltersResponse tipindeki sınıf içine yeni filtre listeme sınıfı eklenecektir.
+- Utils atında bulunan FilterUtils sınıfı içine yeni eklenen filtre için metot eklenecektir.
+- Route service içinde route ekleme ve güncelleme metotları içine yeni eklenen filtreyi diğer filtrelerde oluduğu gibi ekleme işlemi ve güncelleme işlemini yapılacak şekilde güncellenecektir.
+- Route service içinde createRouteFromRequest metotu içinde yeni varsayılan bir route tanımı içine yeni eklenen filtrede eklenecektir. Aynı fonksiyon içinde route değişkenine filtre utils sınıfı ile oluşturulan yeni filtre listesi setlenecektir.
+- Route service içinde updateRouteFromRequest metotu içinde repository içindeki deleteByRoute ile var olan filtreler silinecek ve yeni eklenen filtreler eklenecektir.
+- Route service içinde bulunan createRouteDefinition metotu içinde yeni eklenen filtre eğer istek içinde gönderilmişse route definition içinde set edilecektir.
+- Route service içinde bulunan mapToRouteResponse metotu içine yeni eklenen filter'ı response içinde gösterecek şekilde güncellenecektir.
 
 Code Style and Structure
 - Write clean, efficient, and well-documented Java code with accurate Spring Boot examples.
@@ -30,6 +38,7 @@ Code Style and Structure
 - Implement RESTful API design patterns when creating web services.
 - Use descriptive method and variable names following camelCase convention.
 - Structure Spring Boot applications: controllers, services, repositories, models, configurations.
+- Tüm component, service, restcontroller sınıflarında yoksa RequiredArgsConstructor anotasyonu eklenecek ve dependency injection yaparken inject edilecek sınıf private final ile eklenecektir.
 
 Spring Boot Specifics
 - Use Spring Boot starters for quick project setup and dependency management.
@@ -86,6 +95,7 @@ Data Access and ORM
 - Implement proper entity relationships and cascading.
 - Use database migrations with Flyway.
 - Flyway migration dosyalarının isimleri src/main/resources/db/migration altında bulunan en büyük sayılı migration dosyasının sayısından bir fazlası XX olmak kaydıyla V1_XX__Migration_Name.sql olmalıdır. Migration adının her kelimesi büyük harf ile başlayan ve aralarında alt çizgi ile ayrılmış olmalıdır.
+- Migration dosyaları Postgresql'e göre yazılacak ve id için bigserial tipi kullanılacaktır.
 
 Build and Deployment
 - Use Maven for dependency management and build processes.
