@@ -17,4 +17,5 @@ public class FiltersResponse {
   private List<AddResponseHeaderFilterResponse> addResponseHeaders;
   private List<CircuitBreakerResponse> circuitBreakers;
   private List<DedupeResponseHeaderResponse> dedupeResponseHeaders;
+  private List<FallbackHeadersResponse> fallbackHeaders;
 }

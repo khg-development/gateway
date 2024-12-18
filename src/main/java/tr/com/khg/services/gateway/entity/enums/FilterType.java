@@ -10,7 +10,13 @@ public enum FilterType {
   ADD_RESPONSE_HEADER("AddResponseHeader"),
   CIRCUIT_BREAKER("CircuitBreaker", "name", "fallbackUri", "statusCodes"),
   CACHE_REQUEST_BODY("CacheRequestBody", "bodyClass"),
-  DEDUPE_RESPONSE_HEADER("DedupeResponseHeader", "name", "strategy");
+  DEDUPE_RESPONSE_HEADER("DedupeResponseHeader", "name", "strategy"),
+  FALLBACK_HEADERS(
+      "FallbackHeaders",
+      "executionExceptionTypeHeaderName",
+      "executionExceptionMessageHeaderName",
+      "rootCauseExceptionTypeHeaderName",
+      "rootCauseExceptionMessageHeaderName");
 
   private final String type;
   private final String[] args;

@@ -113,4 +113,20 @@ public class FilterUtils {
             .build())
         .collect(Collectors.toList());
   }
+
+  public List<RouteFallbackHeadersFilter> createFallbackHeadersFilters(Filters filters, Route route) {
+    if (filters == null || filters.getFallbackHeaders() == null) {
+      return new ArrayList<>();
+    }
+
+    return filters.getFallbackHeaders().stream()
+        .map(filter -> RouteFallbackHeadersFilter.builder()
+            .route(route)
+            .executionExceptionTypeHeaderName(filter.getExecutionExceptionTypeHeaderName())
+            .executionExceptionMessageHeaderName(filter.getExecutionExceptionMessageHeaderName())
+            .rootCauseExceptionTypeHeaderName(filter.getRootCauseExceptionTypeHeaderName())
+            .rootCauseExceptionMessageHeaderName(filter.getRootCauseExceptionMessageHeaderName())
+            .build())
+        .collect(Collectors.toList());
+  }
 }

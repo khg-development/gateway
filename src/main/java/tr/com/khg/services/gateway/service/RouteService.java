@@ -57,6 +57,7 @@ public class RouteService {
   private final RouteAddResponseHeaderFilterRepository addResponseHeaderFilterRepository;
   private final RouteCircuitBreakerFilterRepository circuitBreakerFilterRepository;
   private final RouteDedupeResponseHeaderFilterRepository dedupeResponseHeaderFilterRepository;
+  private final RouteFallbackHeadersFilterRepository fallbackHeadersFilterRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -213,6 +214,7 @@ public class RouteService {
             .routeAddResponseHeaderFilters(new ArrayList<>())
             .routeCircuitBreakerFilters(new ArrayList<>())
             .routeDedupeResponseHeaderFilters(new ArrayList<>())
+            .routeFallbackHeadersFilters(new ArrayList<>())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -238,6 +240,7 @@ public class RouteService {
     route.setRouteCircuitBreakerFilters(filterUtils.createCircuitBreakerFilters(f, route));
     route.setRouteDedupeResponseHeaderFilters(
         filterUtils.createDedupeResponseHeaderFilters(f, route));
+    route.setRouteFallbackHeadersFilters(filterUtils.createFallbackHeadersFilters(f, route));
 
     return route;
   }
@@ -275,6 +278,7 @@ public class RouteService {
     addResponseHeaderFilterRepository.deleteByRoute(existingRoute);
     circuitBreakerFilterRepository.deleteByRoute(existingRoute);
     dedupeResponseHeaderFilterRepository.deleteByRoute(existingRoute);
+    fallbackHeadersFilterRepository.deleteByRoute(existingRoute);
 
     Predications p = request.getPredications();
     existingRoute.setRouteCookiePredications(
@@ -305,6 +309,8 @@ public class RouteService {
         filterUtils.createCircuitBreakerFilters(f, existingRoute));
     existingRoute.setRouteDedupeResponseHeaderFilters(
         filterUtils.createDedupeResponseHeaderFilters(f, existingRoute));
+    existingRoute.setRouteFallbackHeadersFilters(
+        filterUtils.createFallbackHeadersFilters(f, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -513,6 +519,24 @@ public class RouteService {
           });
     }
 
+    if (request.getFilters().getFallbackHeaders() != null
+        && !request.getFilters().getFallbackHeaders().isEmpty()) {
+      request
+          .getFilters()
+          .getFallbackHeaders()
+          .forEach(
+              filter -> {
+                FilterDefinition filterDefinition =
+                    definitionUtils.createFilterDefinition(
+                        FALLBACK_HEADERS,
+                        filter.getExecutionExceptionTypeHeaderName(),
+                        filter.getExecutionExceptionMessageHeaderName(),
+                        filter.getRootCauseExceptionTypeHeaderName(),
+                        filter.getRootCauseExceptionMessageHeaderName());
+                filters.add(filterDefinition);
+              });
+    }
+
     routeDefinition.setPredicates(predicates);
     routeDefinition.setFilters(filters);
     return routeDefinition;
@@ -715,6 +739,25 @@ public class RouteService {
               .toList();
     }
 
+    List<FallbackHeadersResponse> fallbackHeadersResponses = new ArrayList<>();
+    if (route.getRouteFallbackHeadersFilters() != null) {
+      fallbackHeadersResponses =
+          route.getRouteFallbackHeadersFilters().stream()
+              .map(
+                  filter ->
+                      FallbackHeadersResponse.builder()
+                          .executionExceptionTypeHeaderName(
+                              filter.getExecutionExceptionTypeHeaderName())
+                          .executionExceptionMessageHeaderName(
+                              filter.getExecutionExceptionMessageHeaderName())
+                          .rootCauseExceptionTypeHeaderName(
+                              filter.getRootCauseExceptionTypeHeaderName())
+                          .rootCauseExceptionMessageHeaderName(
+                              filter.getRootCauseExceptionMessageHeaderName())
+                          .build())
+              .toList();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -741,6 +784,7 @@ public class RouteService {
                 .addResponseHeaders(addResponseHeaderResponses)
                 .circuitBreakers(circuitBreakerResponses)
                 .dedupeResponseHeaders(dedupeResponseHeaderResponses)
+                .fallbackHeaders(fallbackHeadersResponses)
                 .build())
         .build();
   }
