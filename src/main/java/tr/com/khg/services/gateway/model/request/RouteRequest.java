@@ -26,6 +26,8 @@ public class RouteRequest {
   @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
   private ZonedDateTime expirationTime;
 
+  private Boolean bodyLogEnabled = true;
+
   private Predications predications = new Predications();
 
   private Filters filters = new Filters();

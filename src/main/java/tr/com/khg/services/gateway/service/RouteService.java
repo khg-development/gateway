@@ -306,6 +306,10 @@ public class RouteService {
     List<PredicateDefinition> predicates = new ArrayList<>();
     List<FilterDefinition> filters = new ArrayList<>();
 
+    if (request.getBodyLogEnabled()) {
+      filters.add(definitionUtils.createFilterDefinition(CACHE_REQUEST_BODY, "java.lang.String"));
+    }
+
     boolean matchTrailingSlash =
         request.getMatchTrailingSlash() != null ? request.getMatchTrailingSlash() : true;
     predicates.add(

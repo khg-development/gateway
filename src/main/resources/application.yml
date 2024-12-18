@@ -25,6 +25,8 @@ management:
         include: "*"
       base-path: /actuator
   endpoint:
+    gateway:
+      access: unrestricted
     health:
       show-details: always
     shutdown:

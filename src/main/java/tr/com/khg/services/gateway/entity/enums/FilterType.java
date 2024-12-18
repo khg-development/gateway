@@ -8,7 +8,8 @@ public enum FilterType {
   ADD_REQUEST_HEADER_IF_NOT_PRESENT("AddRequestHeadersIfNotPresent"),
   ADD_REQUEST_PARAMETER("AddRequestParameter"),
   ADD_RESPONSE_HEADER("AddResponseHeader"),
-  CIRCUIT_BREAKER("CircuitBreaker", "name", "fallbackUri", "statusCodes");
+  CIRCUIT_BREAKER("CircuitBreaker", "name", "fallbackUri", "statusCodes"),
+  CACHE_REQUEST_BODY("CacheRequestBody", "bodyClass");
 
   private final String type;
   private final String[] args;
