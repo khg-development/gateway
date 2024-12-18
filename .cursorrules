@@ -1,6 +1,29 @@
 
 You are an expert in Java programming, Spring Boot, Spring Framework, Maven, JUnit, and related Java technologies.
 
+Uygulama bir Gateway uygulamasıdır. Reactive programlama kullanılmaktadır. Tüm fonksiyonları buna göre hazırla.
+Uygulamanın ana paket adı "tr.com.khg.services.gateway" dir ve src/main/java/tr/com/khg/services/gateway altında bulunur.
+
+Kod yerleşimi
+- Configuration sınıfları src/main/java/tr/com/khg/services/gateway/config altında bulunur.
+- Entity sınıfları src/main/java/tr/com/khg/services/gateway/entity altında bulunur.
+- Repository sınıfları src/main/java/tr/com/khg/services/gateway/repository altında bulunur.
+- Service sınıfları src/main/java/tr/com/khg/services/gateway/service altında bulunur.
+- Controller sınıfları src/main/java/tr/com/khg/services/gateway/web/rest altında bulunur.
+- Model sınıfları src/main/java/tr/com/khg/services/gateway/model altında bulunur.
+- Request sınıfları src/main/java/tr/com/khg/services/gateway/model/request altında bulunur.
+- Response sınıfları src/main/java/tr/com/khg/services/gateway/model/response altında bulunur.
+
+Gateway filter tanımlama
+- Spring Cloud Gateway ile filter tanımlama yapılacaktır.
+- Yeni eklenecek yeni tip filter tanımı için yeni bir entity tanımlanacak ve Route entity'si ile ilişkilendirilecektir.
+- Eklenen filter için repository paketi altına yeni bir repository tanımlanacak.
+- Repository içine deleteByRoute adında bir method tanımlanacak. Ve bu metot modifying ve transactional olacak.
+- Bu filtreyi ekleme için Filtre Adına uygun şekilde bir ekleme sınıfı tanımlanacak. Örneğin isim NewFilter gibi olacaktır.
+- Yeni bir route ekleme isteğinde kullanılan RouteRequest sınıfının içinde bulunan Filter tipindeki sınıf içine yeni filtre ekleme sınıfı eklenecektir.
+- Listeleme için Filter Response sınıfı oluşturulacak. RouteResponse sınıfının içinde bulunan FilterResponse tipindeki sınıf içine yeni filtre listeme sınıfı eklenecektir.
+- Service içinde route ekleme ve güncelleme metotları içine yeni eklenen filtreyi diğer filtrelerde oluduğu gibi ekleme işlemi ve güncelleme işlemini yapılacak şekilde güncellenecektir.
+
 Code Style and Structure
 - Write clean, efficient, and well-documented Java code with accurate Spring Boot examples.
 - Use Spring Boot best practices and conventions throughout your code.
@@ -62,7 +85,7 @@ Data Access and ORM
 - Use Spring Data JPA for database operations.
 - Implement proper entity relationships and cascading.
 - Use database migrations with Flyway.
-- Flyway migration dosyalarının isimleri aksi söylenmediği sürece V1_XX__XXXX.sql olmalıdır.
+- Flyway migration dosyalarının isimleri src/main/resources/db/migration altında bulunan en büyük sayılı migration dosyasının sayısından bir fazlası XX olmak kaydıyla V1_XX__Migration_Name.sql olmalıdır. Migration adının her kelimesi büyük harf ile başlayan ve aralarında alt çizgi ile ayrılmış olmalıdır.
 
 Build and Deployment
 - Use Maven for dependency management and build processes.
