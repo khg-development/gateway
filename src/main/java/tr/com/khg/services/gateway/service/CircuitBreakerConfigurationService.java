@@ -5,7 +5,10 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import jakarta.annotation.PostConstruct;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -32,7 +35,7 @@ public class CircuitBreakerConfigurationService {
   public void loadCircuitBreakersFromDatabase() {
     log.info("Loading circuit breakers from database");
 
-    Mono.fromCallable(() -> circuitBreakerConfigurationRepository.findAll())
+    Mono.fromCallable(circuitBreakerConfigurationRepository::findAll)
         .subscribeOn(Schedulers.boundedElastic())
         .flatMapIterable(configs -> configs)
         .doOnNext(
@@ -162,7 +165,25 @@ public class CircuitBreakerConfigurationService {
             .minimumNumberOfCalls(config.getMinimumNumberOfCalls())
             .waitDurationInOpenState(Duration.ofMillis(config.getWaitDurationInOpenState()))
             .automaticTransitionFromOpenToHalfOpenEnabled(
-                config.getAutomaticTransitionFromOpenToHalfOpenEnabled());
+                config.getAutomaticTransitionFromOpenToHalfOpenEnabled())
+            .slidingWindowType(config.getSlidingWindowType());
+
+    if (config.getIgnoreExceptions() != null && !config.getIgnoreExceptions().isEmpty()) {
+      List<Class<? extends Throwable>> ignoreExceptions =
+          parseExceptionClasses(config.getIgnoreExceptions());
+      builder.ignoreExceptions(ignoreExceptions.toArray(new Class[0]));
+    }
+
+    if (config.getRecordExceptions() != null && !config.getRecordExceptions().isEmpty()) {
+      List<Class<? extends Throwable>> recordExceptions =
+          parseExceptionClasses(config.getRecordExceptions());
+      builder.recordExceptions(recordExceptions.toArray(new Class[0]));
+    }
+
+    if (config.getMaxWaitDurationInHalfOpenState() != null) {
+      builder.maxWaitDurationInHalfOpenState(
+          Duration.ofMillis(config.getMaxWaitDurationInHalfOpenState()));
+    }
 
     CircuitBreaker circuitBreaker =
         circuitBreakerRegistry.circuitBreaker(config.getName(), builder.build());
@@ -177,6 +198,23 @@ public class CircuitBreakerConfigurationService {
                     event.getStateTransition().getToState()));
   }
 
+  @SuppressWarnings("unchecked")
+  private List<Class<? extends Throwable>> parseExceptionClasses(String exceptions) {
+    return Arrays.stream(exceptions.split(","))
+        .map(String::trim)
+        .map(
+            className -> {
+              try {
+                return (Class<? extends Throwable>) Class.forName(className);
+              } catch (ClassNotFoundException e) {
+                log.error("Exception class not found: {}", className);
+                return null;
+              }
+            })
+        .filter(Objects::nonNull)
+        .collect(Collectors.toList());
+  }
+
   private CircuitBreakerConfiguration mapToEntity(CircuitBreakerConfigurationRequest request) {
     return CircuitBreakerConfiguration.builder()
         .name(request.getName())
@@ -189,6 +227,16 @@ public class CircuitBreakerConfigurationService {
         .waitDurationInOpenState(request.getWaitDurationInOpenState())
         .automaticTransitionFromOpenToHalfOpenEnabled(
             request.getAutomaticTransitionFromOpenToHalfOpenEnabled())
+        .slidingWindowType(request.getSlidingWindowType())
+        .ignoreExceptions(
+            request.getIgnoreExceptions() != null
+                ? String.join(",", request.getIgnoreExceptions())
+                : null)
+        .recordExceptions(
+            request.getRecordExceptions() != null
+                ? String.join(",", request.getRecordExceptions())
+                : null)
+        .maxWaitDurationInHalfOpenState(request.getMaxWaitDurationInHalfOpenState())
         .build();
   }
 
@@ -205,6 +253,16 @@ public class CircuitBreakerConfigurationService {
         .waitDurationInOpenState(config.getWaitDurationInOpenState())
         .automaticTransitionFromOpenToHalfOpenEnabled(
             config.getAutomaticTransitionFromOpenToHalfOpenEnabled())
+        .slidingWindowType(config.getSlidingWindowType())
+        .ignoreExceptions(
+            config.getIgnoreExceptions() != null
+                ? Arrays.asList(config.getIgnoreExceptions().split(","))
+                : null)
+        .recordExceptions(
+            config.getRecordExceptions() != null
+                ? Arrays.asList(config.getRecordExceptions().split(","))
+                : null)
+        .maxWaitDurationInHalfOpenState(config.getMaxWaitDurationInHalfOpenState())
         .createdAt(config.getCreatedAt())
         .updatedAt(config.getUpdatedAt())
         .build();

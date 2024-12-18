@@ -1,5 +1,6 @@
 package tr.com.khg.services.gateway.entity;
 
+import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig.SlidingWindowType;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import lombok.*;
@@ -43,6 +44,19 @@ public class CircuitBreakerConfiguration {
 
     @Column(name = "automatic_transition_from_open_to_half_open_enabled", nullable = false)
     private Boolean automaticTransitionFromOpenToHalfOpenEnabled;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "sliding_window_type", nullable = false)
+    private SlidingWindowType slidingWindowType;
+
+    @Column(name = "ignore_exceptions", columnDefinition = "text")
+    private String ignoreExceptions;
+
+    @Column(name = "record_exceptions", columnDefinition = "text")
+    private String recordExceptions;
+
+    @Column(name = "max_wait_duration_in_half_open_state")
+    private Long maxWaitDurationInHalfOpenState;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
