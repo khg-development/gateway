@@ -9,7 +9,8 @@ public enum FilterType {
   ADD_REQUEST_PARAMETER("AddRequestParameter"),
   ADD_RESPONSE_HEADER("AddResponseHeader"),
   CIRCUIT_BREAKER("CircuitBreaker", "name", "fallbackUri", "statusCodes"),
-  CACHE_REQUEST_BODY("CacheRequestBody", "bodyClass");
+  CACHE_REQUEST_BODY("CacheRequestBody", "bodyClass"),
+  DEDUPE_RESPONSE_HEADER("DedupeResponseHeader", "name", "strategy");
 
   private final String type;
   private final String[] args;

@@ -99,4 +99,18 @@ public class FilterUtils {
                     .build())
         .collect(Collectors.toList());
   }
+
+  public List<RouteDedupeResponseHeaderFilter> createDedupeResponseHeaderFilters(Filters filters, Route route) {
+    if (filters == null || filters.getDedupeResponseHeaders() == null) {
+      return new ArrayList<>();
+    }
+
+    return filters.getDedupeResponseHeaders().stream()
+        .map(filter -> RouteDedupeResponseHeaderFilter.builder()
+            .route(route)
+            .name(filter.getName())
+            .strategy(filter.getStrategy())
+            .build())
+        .collect(Collectors.toList());
+  }
 }

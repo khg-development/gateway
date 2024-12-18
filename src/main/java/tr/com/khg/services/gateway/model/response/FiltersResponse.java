@@ -16,4 +16,5 @@ public class FiltersResponse {
   private List<AddRequestParameterFilterResponse> addRequestParameters;
   private List<AddResponseHeaderFilterResponse> addResponseHeaders;
   private List<CircuitBreakerResponse> circuitBreakers;
+  private List<DedupeResponseHeaderResponse> dedupeResponseHeaders;
 }

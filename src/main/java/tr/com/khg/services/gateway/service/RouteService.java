@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import tr.com.khg.services.gateway.entity.*;
+import tr.com.khg.services.gateway.entity.enums.DedupeStrategy;
 import tr.com.khg.services.gateway.exception.DuplicateRouteException;
 import tr.com.khg.services.gateway.model.request.*;
 import tr.com.khg.services.gateway.model.response.*;
@@ -55,6 +56,7 @@ public class RouteService {
   private final RouteAddRequestParameterFilterRepository addRequestParameterFilterRepository;
   private final RouteAddResponseHeaderFilterRepository addResponseHeaderFilterRepository;
   private final RouteCircuitBreakerFilterRepository circuitBreakerFilterRepository;
+  private final RouteDedupeResponseHeaderFilterRepository dedupeResponseHeaderFilterRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -210,6 +212,7 @@ public class RouteService {
             .routeAddRequestParameterFilters(new ArrayList<>())
             .routeAddResponseHeaderFilters(new ArrayList<>())
             .routeCircuitBreakerFilters(new ArrayList<>())
+            .routeDedupeResponseHeaderFilters(new ArrayList<>())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -233,6 +236,8 @@ public class RouteService {
         filterUtils.createAddRequestParameterFilters(f, route));
     route.setRouteAddResponseHeaderFilters(filterUtils.createAddResponseHeaderFilters(f, route));
     route.setRouteCircuitBreakerFilters(filterUtils.createCircuitBreakerFilters(f, route));
+    route.setRouteDedupeResponseHeaderFilters(
+        filterUtils.createDedupeResponseHeaderFilters(f, route));
 
     return route;
   }
@@ -269,6 +274,7 @@ public class RouteService {
     addRequestParameterFilterRepository.deleteByRoute(existingRoute);
     addResponseHeaderFilterRepository.deleteByRoute(existingRoute);
     circuitBreakerFilterRepository.deleteByRoute(existingRoute);
+    dedupeResponseHeaderFilterRepository.deleteByRoute(existingRoute);
 
     Predications p = request.getPredications();
     existingRoute.setRouteCookiePredications(
@@ -297,6 +303,8 @@ public class RouteService {
         filterUtils.createAddResponseHeaderFilters(f, existingRoute));
     existingRoute.setRouteCircuitBreakerFilters(
         filterUtils.createCircuitBreakerFilters(f, existingRoute));
+    existingRoute.setRouteDedupeResponseHeaderFilters(
+        filterUtils.createDedupeResponseHeaderFilters(f, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -485,6 +493,24 @@ public class RouteService {
                         CIRCUIT_BREAKER, filter.getName(), filter.getFallbackUri(), statusCodes);
                 filters.add(filterDefinition);
               });
+    }
+
+    if (request.getFilters().getDedupeResponseHeaders() != null
+        && !request.getFilters().getDedupeResponseHeaders().isEmpty()) {
+      Map<DedupeStrategy, String> groupedByStrategy =
+          request.getFilters().getDedupeResponseHeaders().stream()
+              .collect(
+                  Collectors.groupingBy(
+                      DedupeResponseHeaderRequest::getStrategy,
+                      Collectors.mapping(
+                          DedupeResponseHeaderRequest::getName, Collectors.joining(" "))));
+      groupedByStrategy.forEach(
+          (strategy, name) -> {
+            FilterDefinition filterDefinition =
+                definitionUtils.createFilterDefinition(
+                    DEDUPE_RESPONSE_HEADER, name, strategy.name());
+            filters.add(filterDefinition);
+          });
     }
 
     routeDefinition.setPredicates(predicates);
@@ -676,6 +702,19 @@ public class RouteService {
               .toList();
     }
 
+    List<DedupeResponseHeaderResponse> dedupeResponseHeaderResponses = new ArrayList<>();
+    if (route.getRouteDedupeResponseHeaderFilters() != null) {
+      dedupeResponseHeaderResponses =
+          route.getRouteDedupeResponseHeaderFilters().stream()
+              .map(
+                  filter ->
+                      DedupeResponseHeaderResponse.builder()
+                          .name(filter.getName())
+                          .strategy(filter.getStrategy())
+                          .build())
+              .toList();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -701,6 +740,7 @@ public class RouteService {
                 .addRequestParameters(addRequestParameterResponses)
                 .addResponseHeaders(addResponseHeaderResponses)
                 .circuitBreakers(circuitBreakerResponses)
+                .dedupeResponseHeaders(dedupeResponseHeaderResponses)
                 .build())
         .build();
   }
