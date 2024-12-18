@@ -7,13 +7,28 @@ spring:
     username: p0sTgUS3r
     password: p0StgResQl
     driver-class-name: org.postgresql.Driver
-  
+
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: none
     show-sql: true
-    
+
   flyway:
     enabled: true
-    baseline-on-migrate: true 
+    baseline-on-migrate: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+    shutdown:
+      access: unrestricted
+  info:
+    env:
+      enabled: true
