@@ -18,5 +18,4 @@ public class FiltersResponse {
   private List<CircuitBreakerResponse> circuitBreakers;
   private List<DedupeResponseHeaderResponse> dedupeResponseHeaders;
   private List<FallbackHeadersResponse> fallbackHeaders;
-  private List<JsonToGrpcResponse> jsonToGrpc;
 }

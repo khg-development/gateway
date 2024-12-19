@@ -137,22 +137,4 @@ public class FilterUtils {
                     .build())
         .collect(Collectors.toList());
   }
-
-  public List<RouteJsonToGrpcFilter> createJsonToGrpcFilters(Filters filters, Route route) {
-    if (filters == null || filters.getJsonToGrpc() == null) {
-      return new ArrayList<>();
-    }
-
-    return filters.getJsonToGrpc().stream()
-        .map(
-            filter ->
-                RouteJsonToGrpcFilter.builder()
-                    .route(route)
-                    .protoDescriptor(filter.getProtoDescriptor())
-                    .protoFile(filter.getProtoFile())
-                    .serviceName(filter.getServiceName())
-                    .methodName(filter.getMethodName())
-                    .build())
-        .collect(Collectors.toList());
-  }
 }

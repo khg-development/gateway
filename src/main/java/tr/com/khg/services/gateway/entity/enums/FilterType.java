@@ -16,8 +16,7 @@ public enum FilterType {
       "executionExceptionTypeHeaderName",
       "executionExceptionMessageHeaderName",
       "rootCauseExceptionTypeHeaderName",
-      "rootCauseExceptionMessageHeaderName"),
-  JSON_TO_GRPC("JsonToGrpc", "protoDescriptor", "protoFile", "service", "method");
+      "rootCauseExceptionMessageHeaderName");
 
   private final String type;
   private final String[] args;
