@@ -215,7 +215,6 @@ public class RouteService {
             .routeCircuitBreakerFilters(new ArrayList<>())
             .routeDedupeResponseHeaderFilters(new ArrayList<>())
             .routeFallbackHeadersFilters(new ArrayList<>())
-            .routeJsonToGrpcFilters(new ArrayList<>())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
