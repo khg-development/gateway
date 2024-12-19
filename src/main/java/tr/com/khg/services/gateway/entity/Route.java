@@ -107,10 +107,14 @@ public class Route implements Serializable {
   private List<RouteCircuitBreakerFilter> routeCircuitBreakerFilters = new ArrayList<>();
 
   @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-  private List<RouteDedupeResponseHeaderFilter> routeDedupeResponseHeaderFilters = new ArrayList<>();
+  private List<RouteDedupeResponseHeaderFilter> routeDedupeResponseHeaderFilters =
+      new ArrayList<>();
 
   @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
   private List<RouteFallbackHeadersFilter> routeFallbackHeadersFilters = new ArrayList<>();
+
+  @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+  private List<RouteJsonToGrpcFilter> routeJsonToGrpcFilters = new ArrayList<>();
 
   public void clearPredications() {
     routeCookiePredications.clear();
@@ -130,5 +134,6 @@ public class Route implements Serializable {
     routeCircuitBreakerFilters.clear();
     routeDedupeResponseHeaderFilters.clear();
     routeFallbackHeadersFilters.clear();
+    routeJsonToGrpcFilters.clear();
   }
 }

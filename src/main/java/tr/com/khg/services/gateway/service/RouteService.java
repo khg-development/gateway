@@ -58,6 +58,7 @@ public class RouteService {
   private final RouteCircuitBreakerFilterRepository circuitBreakerFilterRepository;
   private final RouteDedupeResponseHeaderFilterRepository dedupeResponseHeaderFilterRepository;
   private final RouteFallbackHeadersFilterRepository fallbackHeadersFilterRepository;
+  private final RouteJsonToGrpcFilterRepository jsonToGrpcFilterRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -215,6 +216,7 @@ public class RouteService {
             .routeCircuitBreakerFilters(new ArrayList<>())
             .routeDedupeResponseHeaderFilters(new ArrayList<>())
             .routeFallbackHeadersFilters(new ArrayList<>())
+            .routeJsonToGrpcFilters(new ArrayList<>())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -241,6 +243,7 @@ public class RouteService {
     route.setRouteDedupeResponseHeaderFilters(
         filterUtils.createDedupeResponseHeaderFilters(f, route));
     route.setRouteFallbackHeadersFilters(filterUtils.createFallbackHeadersFilters(f, route));
+    route.setRouteJsonToGrpcFilters(filterUtils.createJsonToGrpcFilters(f, route));
 
     return route;
   }
@@ -279,6 +282,7 @@ public class RouteService {
     circuitBreakerFilterRepository.deleteByRoute(existingRoute);
     dedupeResponseHeaderFilterRepository.deleteByRoute(existingRoute);
     fallbackHeadersFilterRepository.deleteByRoute(existingRoute);
+    jsonToGrpcFilterRepository.deleteByRoute(existingRoute);
 
     Predications p = request.getPredications();
     existingRoute.setRouteCookiePredications(
@@ -311,6 +315,7 @@ public class RouteService {
         filterUtils.createDedupeResponseHeaderFilters(f, existingRoute));
     existingRoute.setRouteFallbackHeadersFilters(
         filterUtils.createFallbackHeadersFilters(f, existingRoute));
+    existingRoute.setRouteJsonToGrpcFilters(filterUtils.createJsonToGrpcFilters(f, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -537,6 +542,24 @@ public class RouteService {
               });
     }
 
+    if (request.getFilters().getJsonToGrpc() != null
+        && !request.getFilters().getJsonToGrpc().isEmpty()) {
+      request
+          .getFilters()
+          .getJsonToGrpc()
+          .forEach(
+              filter -> {
+                FilterDefinition filterDefinition =
+                    definitionUtils.createFilterDefinition(
+                        JSON_TO_GRPC,
+                        filter.getProtoDescriptor(),
+                        filter.getProtoFile(),
+                        filter.getServiceName(),
+                        filter.getMethodName());
+                filters.add(filterDefinition);
+              });
+    }
+
     routeDefinition.setPredicates(predicates);
     routeDefinition.setFilters(filters);
     return routeDefinition;
@@ -758,6 +781,21 @@ public class RouteService {
               .toList();
     }
 
+    List<JsonToGrpcResponse> jsonToGrpcResponses = new ArrayList<>();
+    if (route.getRouteJsonToGrpcFilters() != null) {
+      jsonToGrpcResponses =
+          route.getRouteJsonToGrpcFilters().stream()
+              .map(
+                  filter ->
+                      JsonToGrpcResponse.builder()
+                          .protoDescriptor(filter.getProtoDescriptor())
+                          .protoFile(filter.getProtoFile())
+                          .serviceName(filter.getServiceName())
+                          .methodName(filter.getMethodName())
+                          .build())
+              .toList();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -785,6 +823,7 @@ public class RouteService {
                 .circuitBreakers(circuitBreakerResponses)
                 .dedupeResponseHeaders(dedupeResponseHeaderResponses)
                 .fallbackHeaders(fallbackHeadersResponses)
+                .jsonToGrpc(jsonToGrpcResponses)
                 .build())
         .build();
   }

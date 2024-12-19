@@ -100,33 +100,59 @@ public class FilterUtils {
         .collect(Collectors.toList());
   }
 
-  public List<RouteDedupeResponseHeaderFilter> createDedupeResponseHeaderFilters(Filters filters, Route route) {
+  public List<RouteDedupeResponseHeaderFilter> createDedupeResponseHeaderFilters(
+      Filters filters, Route route) {
     if (filters == null || filters.getDedupeResponseHeaders() == null) {
       return new ArrayList<>();
     }
 
     return filters.getDedupeResponseHeaders().stream()
-        .map(filter -> RouteDedupeResponseHeaderFilter.builder()
-            .route(route)
-            .name(filter.getName())
-            .strategy(filter.getStrategy())
-            .build())
+        .map(
+            filter ->
+                RouteDedupeResponseHeaderFilter.builder()
+                    .route(route)
+                    .name(filter.getName())
+                    .strategy(filter.getStrategy())
+                    .build())
         .collect(Collectors.toList());
   }
 
-  public List<RouteFallbackHeadersFilter> createFallbackHeadersFilters(Filters filters, Route route) {
+  public List<RouteFallbackHeadersFilter> createFallbackHeadersFilters(
+      Filters filters, Route route) {
     if (filters == null || filters.getFallbackHeaders() == null) {
       return new ArrayList<>();
     }
 
     return filters.getFallbackHeaders().stream()
-        .map(filter -> RouteFallbackHeadersFilter.builder()
-            .route(route)
-            .executionExceptionTypeHeaderName(filter.getExecutionExceptionTypeHeaderName())
-            .executionExceptionMessageHeaderName(filter.getExecutionExceptionMessageHeaderName())
-            .rootCauseExceptionTypeHeaderName(filter.getRootCauseExceptionTypeHeaderName())
-            .rootCauseExceptionMessageHeaderName(filter.getRootCauseExceptionMessageHeaderName())
-            .build())
+        .map(
+            filter ->
+                RouteFallbackHeadersFilter.builder()
+                    .route(route)
+                    .executionExceptionTypeHeaderName(filter.getExecutionExceptionTypeHeaderName())
+                    .executionExceptionMessageHeaderName(
+                        filter.getExecutionExceptionMessageHeaderName())
+                    .rootCauseExceptionTypeHeaderName(filter.getRootCauseExceptionTypeHeaderName())
+                    .rootCauseExceptionMessageHeaderName(
+                        filter.getRootCauseExceptionMessageHeaderName())
+                    .build())
+        .collect(Collectors.toList());
+  }
+
+  public List<RouteJsonToGrpcFilter> createJsonToGrpcFilters(Filters filters, Route route) {
+    if (filters == null || filters.getJsonToGrpc() == null) {
+      return new ArrayList<>();
+    }
+
+    return filters.getJsonToGrpc().stream()
+        .map(
+            filter ->
+                RouteJsonToGrpcFilter.builder()
+                    .route(route)
+                    .protoDescriptor(filter.getProtoDescriptor())
+                    .protoFile(filter.getProtoFile())
+                    .serviceName(filter.getServiceName())
+                    .methodName(filter.getMethodName())
+                    .build())
         .collect(Collectors.toList());
   }
 }
