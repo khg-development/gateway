@@ -2,21 +2,27 @@ spring:
   application:
     name: gateway
 
+  cloud:
+    gateway:
+      filter:
+        local-response-cache:
+          enabled: true
+
   datasource:
     url: jdbc:postgresql://localhost:5432/gateway
     username: p0sTgUS3r
     password: p0StgResQl
     driver-class-name: org.postgresql.Driver
 
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: none
     show-sql: true
-
-  flyway:
-    enabled: true
-    baseline-on-migrate: true
 
 management:
   endpoints:

@@ -137,4 +137,20 @@ public class FilterUtils {
                     .build())
         .collect(Collectors.toList());
   }
+
+  public List<RouteLocalResponseCacheFilter> createLocalResponseCacheFilters(
+      Filters filters, Route route) {
+    if (filters == null || filters.getLocalResponseCache() == null) {
+      return new ArrayList<>();
+    }
+
+    return filters.getLocalResponseCache().stream()
+        .map(filter -> RouteLocalResponseCacheFilter.builder()
+            .route(route)
+            .size(filter.getSize())
+            .timeToLive(filter.getTimeToLive())
+            .noCacheStrategy(filter.getNoCacheStrategy())
+            .build())
+        .collect(Collectors.toList());
+  }
 }

@@ -58,6 +58,7 @@ public class RouteService {
   private final RouteCircuitBreakerFilterRepository circuitBreakerFilterRepository;
   private final RouteDedupeResponseHeaderFilterRepository dedupeResponseHeaderFilterRepository;
   private final RouteFallbackHeadersFilterRepository fallbackHeadersFilterRepository;
+  private final RouteLocalResponseCacheFilterRepository localResponseCacheFilterRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -215,6 +216,7 @@ public class RouteService {
             .routeCircuitBreakerFilters(new ArrayList<>())
             .routeDedupeResponseHeaderFilters(new ArrayList<>())
             .routeFallbackHeadersFilters(new ArrayList<>())
+            .routeLocalResponseCacheFilters(new ArrayList<>())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -241,6 +243,7 @@ public class RouteService {
     route.setRouteDedupeResponseHeaderFilters(
         filterUtils.createDedupeResponseHeaderFilters(f, route));
     route.setRouteFallbackHeadersFilters(filterUtils.createFallbackHeadersFilters(f, route));
+    route.setRouteLocalResponseCacheFilters(filterUtils.createLocalResponseCacheFilters(f, route));
 
     return route;
   }
@@ -279,6 +282,7 @@ public class RouteService {
     circuitBreakerFilterRepository.deleteByRoute(existingRoute);
     dedupeResponseHeaderFilterRepository.deleteByRoute(existingRoute);
     fallbackHeadersFilterRepository.deleteByRoute(existingRoute);
+    localResponseCacheFilterRepository.deleteByRoute(existingRoute);
 
     Predications p = request.getPredications();
     existingRoute.setRouteCookiePredications(
@@ -311,6 +315,8 @@ public class RouteService {
         filterUtils.createDedupeResponseHeaderFilters(f, existingRoute));
     existingRoute.setRouteFallbackHeadersFilters(
         filterUtils.createFallbackHeadersFilters(f, existingRoute));
+    existingRoute.setRouteLocalResponseCacheFilters(
+        filterUtils.createLocalResponseCacheFilters(f, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -537,6 +543,23 @@ public class RouteService {
               });
     }
 
+    if (request.getFilters().getLocalResponseCache() != null
+        && !request.getFilters().getLocalResponseCache().isEmpty()) {
+      request
+          .getFilters()
+          .getLocalResponseCache()
+          .forEach(
+              filter -> {
+                FilterDefinition filterDefinition =
+                    definitionUtils.createFilterDefinition(
+                        LOCAL_RESPONSE_CACHE,
+                        filter.getSize(),
+                        filter.getTimeToLive(),
+                        filter.getNoCacheStrategy().getValue());
+                filters.add(filterDefinition);
+              });
+    }
+
     routeDefinition.setPredicates(predicates);
     routeDefinition.setFilters(filters);
     return routeDefinition;
@@ -758,6 +781,20 @@ public class RouteService {
               .toList();
     }
 
+    List<LocalResponseCacheResponse> localResponseCacheResponses = new ArrayList<>();
+    if (route.getRouteLocalResponseCacheFilters() != null) {
+      localResponseCacheResponses =
+          route.getRouteLocalResponseCacheFilters().stream()
+              .map(
+                  filter ->
+                      LocalResponseCacheResponse.builder()
+                          .size(filter.getSize())
+                          .timeToLive(filter.getTimeToLive())
+                          .noCacheStrategy(filter.getNoCacheStrategy())
+                          .build())
+              .toList();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -785,6 +822,7 @@ public class RouteService {
                 .circuitBreakers(circuitBreakerResponses)
                 .dedupeResponseHeaders(dedupeResponseHeaderResponses)
                 .fallbackHeaders(fallbackHeadersResponses)
+                .localResponseCache(localResponseCacheResponses)
                 .build())
         .build();
   }
