@@ -2,7 +2,6 @@ package tr.com.khg.services.gateway.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import tr.com.khg.services.gateway.entity.enums.NoCacheStrategy;
 
 @Getter
 @Setter
@@ -26,8 +25,4 @@ public class RouteLocalResponseCacheFilter {
 
   @Column(name = "time_to_live")
   private String timeToLive;
-
-  @Enumerated(EnumType.STRING)
-  @Column(name = "no_cache_strategy")
-  private NoCacheStrategy noCacheStrategy = NoCacheStrategy.SKIP_UPDATE_CACHE_ENTRY;
 }

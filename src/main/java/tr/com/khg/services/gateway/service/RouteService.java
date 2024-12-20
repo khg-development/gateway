@@ -552,10 +552,7 @@ public class RouteService {
               filter -> {
                 FilterDefinition filterDefinition =
                     definitionUtils.createFilterDefinition(
-                        LOCAL_RESPONSE_CACHE,
-                        filter.getSize(),
-                        filter.getTimeToLive(),
-                        filter.getNoCacheStrategy().getValue());
+                        LOCAL_RESPONSE_CACHE, filter.getSize(), filter.getTimeToLive());
                 filters.add(filterDefinition);
               });
     }
@@ -790,7 +787,6 @@ public class RouteService {
                       LocalResponseCacheResponse.builder()
                           .size(filter.getSize())
                           .timeToLive(filter.getTimeToLive())
-                          .noCacheStrategy(filter.getNoCacheStrategy())
                           .build())
               .toList();
     }

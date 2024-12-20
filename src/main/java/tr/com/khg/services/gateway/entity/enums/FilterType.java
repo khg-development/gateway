@@ -17,7 +17,7 @@ public enum FilterType {
       "executionExceptionMessageHeaderName",
       "rootCauseExceptionTypeHeaderName",
       "rootCauseExceptionMessageHeaderName"),
-  LOCAL_RESPONSE_CACHE("LocalResponseCache", "size", "timeToLive", "request.noCacheStrategy");
+  LOCAL_RESPONSE_CACHE("LocalResponseCache", "size", "timeToLive");
 
   private final String type;
   private final String[] args;

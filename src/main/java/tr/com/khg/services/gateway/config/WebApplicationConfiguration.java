@@ -31,14 +31,14 @@ public class WebApplicationConfiguration {
     return new CorsWebFilter(source);
   }
 
-  //  @Bean
-  //  public RouteLocator routes(RouteLocatorBuilder builder) {
-  //    return builder.routes()
-  //        .route("rewrite_response_upper", r -> r.host("*.rewriteresponseupper.org")
-  //            .filters(f -> f.prefixPath("/httpbin")
-  //                .localResponseCache(Duration.ofMinutes(30), DataSize.of(500, Unit.MEGABYTES))
-  //            ).uri("uri"))
-  //        .build();
-  //  }
+//    @Bean
+//    public RouteLocator routes(RouteLocatorBuilder builder) {
+//      return builder.routes()
+//          .route("rewrite_response_upper", r -> r.host("*.rewriteresponseupper.org")
+//              .filters(f -> f.prefixPath("/httpbin")
+//                  .localResponseCache(Duration.ofMinutes(30), DataSize.of(500, Unit.MEGABYTES))
+//              ).uri("uri"))
+//          .build();
+//    }
 
 }

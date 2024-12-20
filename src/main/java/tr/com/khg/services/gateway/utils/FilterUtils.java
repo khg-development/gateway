@@ -145,12 +145,13 @@ public class FilterUtils {
     }
 
     return filters.getLocalResponseCache().stream()
-        .map(filter -> RouteLocalResponseCacheFilter.builder()
-            .route(route)
-            .size(filter.getSize())
-            .timeToLive(filter.getTimeToLive())
-            .noCacheStrategy(filter.getNoCacheStrategy())
-            .build())
+        .map(
+            filter ->
+                RouteLocalResponseCacheFilter.builder()
+                    .route(route)
+                    .size(filter.getSize())
+                    .timeToLive(filter.getTimeToLive())
+                    .build())
         .collect(Collectors.toList());
   }
 }

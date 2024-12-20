@@ -4,14 +4,12 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import tr.com.khg.services.gateway.entity.enums.NoCacheStrategy;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class LocalResponseCacheResponse {
-    private String size;
-    private String timeToLive;
-    private NoCacheStrategy noCacheStrategy;
+  private String size;
+  private String timeToLive;
 }
