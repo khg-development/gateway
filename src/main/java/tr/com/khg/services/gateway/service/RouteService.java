@@ -60,6 +60,7 @@ public class RouteService {
   private final RouteFallbackHeadersFilterRepository fallbackHeadersFilterRepository;
   private final RouteLocalResponseCacheFilterRepository localResponseCacheFilterRepository;
   private final RouteMapRequestHeaderFilterRepository mapRequestHeaderFilterRepository;
+  private final RoutePrefixPathFilterRepository prefixPathFilterRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -219,6 +220,7 @@ public class RouteService {
             .routeFallbackHeadersFilters(new ArrayList<>())
             .routeLocalResponseCacheFilters(new ArrayList<>())
             .routeMapRequestHeaderFilters(new ArrayList<>())
+            .routePrefixPathFilters(new ArrayList<>())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -247,6 +249,7 @@ public class RouteService {
     route.setRouteFallbackHeadersFilters(filterUtils.createFallbackHeadersFilters(f, route));
     route.setRouteLocalResponseCacheFilters(filterUtils.createLocalResponseCacheFilters(f, route));
     route.setRouteMapRequestHeaderFilters(filterUtils.createMapRequestHeaderFilters(f, route));
+    route.setRoutePrefixPathFilters(filterUtils.createPrefixPathFilters(f, route));
 
     return route;
   }
@@ -287,6 +290,7 @@ public class RouteService {
     fallbackHeadersFilterRepository.deleteByRoute(existingRoute);
     localResponseCacheFilterRepository.deleteByRoute(existingRoute);
     mapRequestHeaderFilterRepository.deleteByRoute(existingRoute);
+    prefixPathFilterRepository.deleteByRoute(existingRoute);
 
     Predications p = request.getPredications();
     existingRoute.setRouteCookiePredications(
@@ -323,6 +327,8 @@ public class RouteService {
         filterUtils.createLocalResponseCacheFilters(f, existingRoute));
     existingRoute.setRouteMapRequestHeaderFilters(
         filterUtils.createMapRequestHeaderFilters(f, existingRoute));
+    existingRoute.setRoutePrefixPathFilters(
+        filterUtils.createPrefixPathFilters(f, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -577,6 +583,20 @@ public class RouteService {
               });
     }
 
+    if (request.getFilters().getPrefixPaths() != null
+        && !request.getFilters().getPrefixPaths().isEmpty()) {
+      request
+          .getFilters()
+          .getPrefixPaths()
+          .forEach(
+              filter -> {
+                FilterDefinition filterDefinition =
+                    definitionUtils.createFilterDefinition(
+                        PREFIX_PATH, filter.getPrefix());
+                filters.add(filterDefinition);
+              });
+    }
+
     routeDefinition.setPredicates(predicates);
     routeDefinition.setFilters(filters);
     return routeDefinition;
@@ -824,6 +844,18 @@ public class RouteService {
               .toList();
     }
 
+    List<PrefixPathResponse> prefixPathResponses = new ArrayList<>();
+    if (route.getRoutePrefixPathFilters() != null) {
+      prefixPathResponses =
+          route.getRoutePrefixPathFilters().stream()
+              .map(
+                  filter ->
+                      PrefixPathResponse.builder()
+                          .prefix(filter.getPrefix())
+                          .build())
+              .toList();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -853,6 +885,7 @@ public class RouteService {
                 .fallbackHeaders(fallbackHeadersResponses)
                 .localResponseCache(localResponseCacheResponses)
                 .mapRequestHeaders(mapRequestHeaderResponses)
+                .prefixPaths(prefixPathResponses)
                 .build())
         .build();
   }

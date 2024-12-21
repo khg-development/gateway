@@ -169,4 +169,17 @@ public class FilterUtils {
             .build())
         .collect(Collectors.toList());
   }
+
+  public List<RoutePrefixPathFilter> createPrefixPathFilters(Filters filters, Route route) {
+    if (filters == null || filters.getPrefixPaths() == null) {
+      return new ArrayList<>();
+    }
+
+    return filters.getPrefixPaths().stream()
+        .map(filter -> RoutePrefixPathFilter.builder()
+            .route(route)
+            .prefix(filter.getPrefix())
+            .build())
+        .collect(Collectors.toList());
+  }
 }

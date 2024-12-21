@@ -20,4 +20,5 @@ public class Filters {
   private List<FallbackHeadersRequest> fallbackHeaders;
   private List<LocalResponseCacheRequest> localResponseCache;
   private List<MapRequestHeaderRequest> mapRequestHeaders;
+  private List<PrefixPathRequest> prefixPaths;
 }

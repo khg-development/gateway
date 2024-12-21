@@ -18,7 +18,8 @@ public enum FilterType {
       "rootCauseExceptionTypeHeaderName",
       "rootCauseExceptionMessageHeaderName"),
   LOCAL_RESPONSE_CACHE("LocalResponseCache", "size", "timeToLive"),
-  MAP_REQUEST_HEADER("MapRequestHeader", "fromHeader", "toHeader");
+  MAP_REQUEST_HEADER("MapRequestHeader", "fromHeader", "toHeader"),
+  PREFIX_PATH("PrefixPath", "prefix");
 
   private final String type;
   private final String[] args;
