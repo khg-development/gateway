@@ -20,7 +20,8 @@ public enum FilterType {
   LOCAL_RESPONSE_CACHE("LocalResponseCache", "size", "timeToLive"),
   MAP_REQUEST_HEADER("MapRequestHeader", "fromHeader", "toHeader"),
   PREFIX_PATH("PrefixPath", "prefix"),
-  PRESERVE_HOST_HEADER("PreserveHostHeader");
+  PRESERVE_HOST_HEADER("PreserveHostHeader"),
+  REDIRECT_TO("RedirectTo", "status", "url", "includeRequestParams");
 
   private final String type;
   private final String[] args;

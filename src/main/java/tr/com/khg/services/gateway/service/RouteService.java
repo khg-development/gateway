@@ -61,6 +61,7 @@ public class RouteService {
   private final RouteLocalResponseCacheFilterRepository localResponseCacheFilterRepository;
   private final RouteMapRequestHeaderFilterRepository mapRequestHeaderFilterRepository;
   private final RoutePrefixPathFilterRepository prefixPathFilterRepository;
+  private final RouteRedirectToFilterRepository redirectToFilterRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -221,6 +222,7 @@ public class RouteService {
             .routeLocalResponseCacheFilters(new ArrayList<>())
             .routeMapRequestHeaderFilters(new ArrayList<>())
             .routePrefixPathFilters(new ArrayList<>())
+            .routeRedirectToFilters(new ArrayList<>())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -250,6 +252,7 @@ public class RouteService {
     route.setRouteLocalResponseCacheFilters(filterUtils.createLocalResponseCacheFilters(f, route));
     route.setRouteMapRequestHeaderFilters(filterUtils.createMapRequestHeaderFilters(f, route));
     route.setRoutePrefixPathFilters(filterUtils.createPrefixPathFilters(f, route));
+    route.setRouteRedirectToFilters(filterUtils.createRedirectToFilters(f, route));
 
     return route;
   }
@@ -291,6 +294,7 @@ public class RouteService {
     localResponseCacheFilterRepository.deleteByRoute(existingRoute);
     mapRequestHeaderFilterRepository.deleteByRoute(existingRoute);
     prefixPathFilterRepository.deleteByRoute(existingRoute);
+    redirectToFilterRepository.deleteByRoute(existingRoute);
 
     Predications p = request.getPredications();
     existingRoute.setRouteCookiePredications(
@@ -328,6 +332,7 @@ public class RouteService {
     existingRoute.setRouteMapRequestHeaderFilters(
         filterUtils.createMapRequestHeaderFilters(f, existingRoute));
     existingRoute.setRoutePrefixPathFilters(filterUtils.createPrefixPathFilters(f, existingRoute));
+    existingRoute.setRouteRedirectToFilters(filterUtils.createRedirectToFilters(f, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -599,6 +604,23 @@ public class RouteService {
               });
     }
 
+    if (request.getFilters().getRedirects() != null
+        && !request.getFilters().getRedirects().isEmpty()) {
+      request
+          .getFilters()
+          .getRedirects()
+          .forEach(
+              filter -> {
+                FilterDefinition filterDefinition =
+                    definitionUtils.createFilterDefinition(
+                        REDIRECT_TO,
+                        String.valueOf(filter.getStatus()),
+                        filter.getUrl(),
+                        String.valueOf(filter.isIncludeRequestParams()));
+                filters.add(filterDefinition);
+              });
+    }
+
     routeDefinition.setPredicates(predicates);
     routeDefinition.setFilters(filters);
     return routeDefinition;
@@ -854,6 +876,20 @@ public class RouteService {
               .toList();
     }
 
+    List<RedirectToResponse> redirectToResponses = new ArrayList<>();
+    if (route.getRouteRedirectToFilters() != null) {
+      redirectToResponses =
+          route.getRouteRedirectToFilters().stream()
+              .map(
+                  filter ->
+                      RedirectToResponse.builder()
+                          .status(filter.getStatus())
+                          .url(filter.getUrl())
+                          .includeRequestParams(filter.isIncludeRequestParams())
+                          .build())
+              .toList();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -886,6 +922,7 @@ public class RouteService {
                 .localResponseCache(localResponseCacheResponses)
                 .mapRequestHeaders(mapRequestHeaderResponses)
                 .prefixPaths(prefixPathResponses)
+                .redirects(redirectToResponses)
                 .build())
         .build();
   }

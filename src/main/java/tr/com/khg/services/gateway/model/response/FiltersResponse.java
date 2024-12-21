@@ -21,4 +21,5 @@ public class FiltersResponse {
   private List<LocalResponseCacheResponse> localResponseCache;
   private List<MapRequestHeaderResponse> mapRequestHeaders;
   private List<PrefixPathResponse> prefixPaths;
+  private List<RedirectToResponse> redirects;
 }

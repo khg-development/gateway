@@ -162,11 +162,13 @@ public class FilterUtils {
     }
 
     return filters.getMapRequestHeaders().stream()
-        .map(filter -> RouteMapRequestHeaderFilter.builder()
-            .route(route)
-            .fromHeader(filter.getFromHeader())
-            .toHeader(filter.getToHeader())
-            .build())
+        .map(
+            filter ->
+                RouteMapRequestHeaderFilter.builder()
+                    .route(route)
+                    .fromHeader(filter.getFromHeader())
+                    .toHeader(filter.getToHeader())
+                    .build())
         .collect(Collectors.toList());
   }
 
@@ -176,10 +178,26 @@ public class FilterUtils {
     }
 
     return filters.getPrefixPaths().stream()
-        .map(filter -> RoutePrefixPathFilter.builder()
-            .route(route)
-            .prefix(filter.getPrefix())
-            .build())
+        .map(
+            filter ->
+                RoutePrefixPathFilter.builder().route(route).prefix(filter.getPrefix()).build())
+        .collect(Collectors.toList());
+  }
+
+  public List<RouteRedirectToFilter> createRedirectToFilters(Filters filters, Route route) {
+    if (filters == null || filters.getRedirects() == null) {
+      return new ArrayList<>();
+    }
+
+    return filters.getRedirects().stream()
+        .map(
+            filter ->
+                RouteRedirectToFilter.builder()
+                    .route(route)
+                    .status(filter.getStatus())
+                    .url(filter.getUrl())
+                    .includeRequestParams(filter.isIncludeRequestParams())
+                    .build())
         .collect(Collectors.toList());
   }
 }
