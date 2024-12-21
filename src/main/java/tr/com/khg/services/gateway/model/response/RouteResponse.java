@@ -19,6 +19,8 @@ public class RouteResponse {
   private HttpMethods method;
   private ZonedDateTime activationTime;
   private ZonedDateTime expirationTime;
+  private Boolean bodyLogEnabled;
+  private Boolean preserveHostHeader;
   private PredicationsResponse predications;
   private FiltersResponse filters;
 }

@@ -327,8 +327,7 @@ public class RouteService {
         filterUtils.createLocalResponseCacheFilters(f, existingRoute));
     existingRoute.setRouteMapRequestHeaderFilters(
         filterUtils.createMapRequestHeaderFilters(f, existingRoute));
-    existingRoute.setRoutePrefixPathFilters(
-        filterUtils.createPrefixPathFilters(f, existingRoute));
+    existingRoute.setRoutePrefixPathFilters(filterUtils.createPrefixPathFilters(f, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -340,6 +339,10 @@ public class RouteService {
 
     if (request.getBodyLogEnabled()) {
       filters.add(definitionUtils.createFilterDefinition(CACHE_REQUEST_BODY, "java.lang.String"));
+    }
+
+    if (request.getPreserveHostHeader()) {
+      filters.add(definitionUtils.createFilterDefinition(PRESERVE_HOST_HEADER));
     }
 
     boolean matchTrailingSlash =
@@ -591,8 +594,7 @@ public class RouteService {
           .forEach(
               filter -> {
                 FilterDefinition filterDefinition =
-                    definitionUtils.createFilterDefinition(
-                        PREFIX_PATH, filter.getPrefix());
+                    definitionUtils.createFilterDefinition(PREFIX_PATH, filter.getPrefix());
                 filters.add(filterDefinition);
               });
     }
@@ -848,11 +850,7 @@ public class RouteService {
     if (route.getRoutePrefixPathFilters() != null) {
       prefixPathResponses =
           route.getRoutePrefixPathFilters().stream()
-              .map(
-                  filter ->
-                      PrefixPathResponse.builder()
-                          .prefix(filter.getPrefix())
-                          .build())
+              .map(filter -> PrefixPathResponse.builder().prefix(filter.getPrefix()).build())
               .toList();
     }
 
@@ -864,6 +862,8 @@ public class RouteService {
         .matchTrailingSlash(route.isMatchTrailingSlash())
         .activationTime(route.getActivationTime())
         .expirationTime(route.getExpirationTime())
+        .bodyLogEnabled(route.isBodyLogEnabled())
+        .preserveHostHeader(route.isPreserveHostHeader())
         .predications(
             PredicationsResponse.builder()
                 .cookies(cookiePredicationResponses)

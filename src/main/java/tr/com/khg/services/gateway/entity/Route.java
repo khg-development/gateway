@@ -54,6 +54,12 @@ public class Route implements Serializable {
   @Column(name = "match_trailing_slash", nullable = false)
   private boolean matchTrailingSlash = true;
 
+  @Column(name = "body_log_enabled", nullable = false)
+  private boolean bodyLogEnabled = true;
+
+  @Column(name = "preserve_host_header")
+  private boolean preserveHostHeader = false;
+
   @Enumerated(EnumType.STRING)
   @Column(name = "method", nullable = false)
   private HttpMethods method;

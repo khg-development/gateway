@@ -28,6 +28,8 @@ public class RouteRequest {
 
   private Boolean bodyLogEnabled = true;
 
+  private Boolean preserveHostHeader = false;
+
   private Predications predications = new Predications();
 
   private Filters filters = new Filters();
