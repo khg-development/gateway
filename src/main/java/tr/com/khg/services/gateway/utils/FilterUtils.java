@@ -154,4 +154,19 @@ public class FilterUtils {
                     .build())
         .collect(Collectors.toList());
   }
+
+  public List<RouteMapRequestHeaderFilter> createMapRequestHeaderFilters(
+      Filters filters, Route route) {
+    if (filters == null || filters.getMapRequestHeaders() == null) {
+      return new ArrayList<>();
+    }
+
+    return filters.getMapRequestHeaders().stream()
+        .map(filter -> RouteMapRequestHeaderFilter.builder()
+            .route(route)
+            .fromHeader(filter.getFromHeader())
+            .toHeader(filter.getToHeader())
+            .build())
+        .collect(Collectors.toList());
+  }
 }

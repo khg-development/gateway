@@ -59,6 +59,7 @@ public class RouteService {
   private final RouteDedupeResponseHeaderFilterRepository dedupeResponseHeaderFilterRepository;
   private final RouteFallbackHeadersFilterRepository fallbackHeadersFilterRepository;
   private final RouteLocalResponseCacheFilterRepository localResponseCacheFilterRepository;
+  private final RouteMapRequestHeaderFilterRepository mapRequestHeaderFilterRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -217,6 +218,7 @@ public class RouteService {
             .routeDedupeResponseHeaderFilters(new ArrayList<>())
             .routeFallbackHeadersFilters(new ArrayList<>())
             .routeLocalResponseCacheFilters(new ArrayList<>())
+            .routeMapRequestHeaderFilters(new ArrayList<>())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -244,6 +246,7 @@ public class RouteService {
         filterUtils.createDedupeResponseHeaderFilters(f, route));
     route.setRouteFallbackHeadersFilters(filterUtils.createFallbackHeadersFilters(f, route));
     route.setRouteLocalResponseCacheFilters(filterUtils.createLocalResponseCacheFilters(f, route));
+    route.setRouteMapRequestHeaderFilters(filterUtils.createMapRequestHeaderFilters(f, route));
 
     return route;
   }
@@ -283,6 +286,7 @@ public class RouteService {
     dedupeResponseHeaderFilterRepository.deleteByRoute(existingRoute);
     fallbackHeadersFilterRepository.deleteByRoute(existingRoute);
     localResponseCacheFilterRepository.deleteByRoute(existingRoute);
+    mapRequestHeaderFilterRepository.deleteByRoute(existingRoute);
 
     Predications p = request.getPredications();
     existingRoute.setRouteCookiePredications(
@@ -317,6 +321,8 @@ public class RouteService {
         filterUtils.createFallbackHeadersFilters(f, existingRoute));
     existingRoute.setRouteLocalResponseCacheFilters(
         filterUtils.createLocalResponseCacheFilters(f, existingRoute));
+    existingRoute.setRouteMapRequestHeaderFilters(
+        filterUtils.createMapRequestHeaderFilters(f, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -557,6 +563,20 @@ public class RouteService {
               });
     }
 
+    if (request.getFilters().getMapRequestHeaders() != null
+        && !request.getFilters().getMapRequestHeaders().isEmpty()) {
+      request
+          .getFilters()
+          .getMapRequestHeaders()
+          .forEach(
+              filter -> {
+                FilterDefinition filterDefinition =
+                    definitionUtils.createFilterDefinition(
+                        MAP_REQUEST_HEADER, filter.getFromHeader(), filter.getToHeader());
+                filters.add(filterDefinition);
+              });
+    }
+
     routeDefinition.setPredicates(predicates);
     routeDefinition.setFilters(filters);
     return routeDefinition;
@@ -791,6 +811,19 @@ public class RouteService {
               .toList();
     }
 
+    List<MapRequestHeaderResponse> mapRequestHeaderResponses = new ArrayList<>();
+    if (route.getRouteMapRequestHeaderFilters() != null) {
+      mapRequestHeaderResponses =
+          route.getRouteMapRequestHeaderFilters().stream()
+              .map(
+                  filter ->
+                      MapRequestHeaderResponse.builder()
+                          .fromHeader(filter.getFromHeader())
+                          .toHeader(filter.getToHeader())
+                          .build())
+              .toList();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -819,6 +852,7 @@ public class RouteService {
                 .dedupeResponseHeaders(dedupeResponseHeaderResponses)
                 .fallbackHeaders(fallbackHeadersResponses)
                 .localResponseCache(localResponseCacheResponses)
+                .mapRequestHeaders(mapRequestHeaderResponses)
                 .build())
         .build();
   }

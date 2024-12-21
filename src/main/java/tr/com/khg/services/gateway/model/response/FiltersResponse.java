@@ -19,4 +19,5 @@ public class FiltersResponse {
   private List<DedupeResponseHeaderResponse> dedupeResponseHeaders;
   private List<FallbackHeadersResponse> fallbackHeaders;
   private List<LocalResponseCacheResponse> localResponseCache;
+  private List<MapRequestHeaderResponse> mapRequestHeaders;
 }
