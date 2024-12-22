@@ -24,4 +24,5 @@ public class FiltersResponse {
   private List<RedirectToResponse> redirects;
   private List<RemoveJsonAttributesResponseBodyResponse> removeJsonAttributesResponseBody;
   private List<RemoveRequestHeaderResponse> removeRequestHeaders;
+  private List<RemoveRequestParameterResponse> removeRequestParameters;
 }

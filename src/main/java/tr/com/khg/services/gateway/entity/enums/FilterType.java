@@ -24,7 +24,8 @@ public enum FilterType {
   REDIRECT_TO("RedirectTo", "status", "url", "includeRequestParams"),
   REMOVE_JSON_ATTRIBUTES_RESPONSE_BODY(
       "RemoveJsonAttributesResponseBody", "attributes", "recursive"),
-  REMOVE_REQUEST_HEADER("RemoveRequestHeader", "name");
+  REMOVE_REQUEST_HEADER("RemoveRequestHeader", "name"),
+  REMOVE_REQUEST_PARAMETER("RemoveRequestParameter", "name");
 
   private final String type;
   private final String[] args;

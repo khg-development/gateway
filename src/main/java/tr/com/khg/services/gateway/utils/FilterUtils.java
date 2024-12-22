@@ -233,4 +233,20 @@ public class FilterUtils {
                     .build())
         .collect(Collectors.toList());
   }
+
+  public List<RouteRemoveRequestParameterFilter> createRemoveRequestParameterFilters(
+      Filters filters, Route route) {
+    if (filters == null || filters.getRemoveRequestParameters() == null) {
+      return new ArrayList<>();
+    }
+
+    return filters.getRemoveRequestParameters().stream()
+        .map(
+            filter ->
+                RouteRemoveRequestParameterFilter.builder()
+                    .route(route)
+                    .name(filter.getName())
+                    .build())
+        .collect(Collectors.toList());
+  }
 }
