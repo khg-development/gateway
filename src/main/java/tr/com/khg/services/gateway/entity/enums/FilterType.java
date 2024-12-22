@@ -23,7 +23,8 @@ public enum FilterType {
   PRESERVE_HOST_HEADER("PreserveHostHeader"),
   REDIRECT_TO("RedirectTo", "status", "url", "includeRequestParams"),
   REMOVE_JSON_ATTRIBUTES_RESPONSE_BODY(
-      "RemoveJsonAttributesResponseBody", "attributes", "recursive");
+      "RemoveJsonAttributesResponseBody", "attributes", "recursive"),
+  REMOVE_REQUEST_HEADER("RemoveRequestHeader", "name");
 
   private final String type;
   private final String[] args;

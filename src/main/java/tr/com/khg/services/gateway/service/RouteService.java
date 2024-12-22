@@ -64,6 +64,7 @@ public class RouteService {
   private final RouteRedirectToFilterRepository redirectToFilterRepository;
   private final RouteRemoveJsonAttributesResponseBodyFilterRepository
       removeJsonAttributesFilterRepository;
+  private final RouteRemoveRequestHeaderFilterRepository removeRequestHeaderFilterRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -226,6 +227,7 @@ public class RouteService {
             .routePrefixPathFilters(new ArrayList<>())
             .routeRedirectToFilters(new ArrayList<>())
             .routeRemoveJsonAttributesResponseBodyFilters(new ArrayList<>())
+            .routeRemoveRequestHeaderFilters(new ArrayList<>())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -258,6 +260,8 @@ public class RouteService {
     route.setRouteRedirectToFilters(filterUtils.createRedirectToFilters(f, route));
     route.setRouteRemoveJsonAttributesResponseBodyFilters(
         filterUtils.createRemoveJsonAttributesResponseBodyFilters(f, route));
+    route.setRouteRemoveRequestHeaderFilters(
+        filterUtils.createRemoveRequestHeaderFilters(f, route));
 
     return route;
   }
@@ -301,6 +305,7 @@ public class RouteService {
     prefixPathFilterRepository.deleteByRoute(existingRoute);
     redirectToFilterRepository.deleteByRoute(existingRoute);
     removeJsonAttributesFilterRepository.deleteByRoute(existingRoute);
+    removeRequestHeaderFilterRepository.deleteByRoute(existingRoute);
 
     Predications p = request.getPredications();
     existingRoute.setRouteCookiePredications(
@@ -341,6 +346,8 @@ public class RouteService {
     existingRoute.setRouteRedirectToFilters(filterUtils.createRedirectToFilters(f, existingRoute));
     existingRoute.setRouteRemoveJsonAttributesResponseBodyFilters(
         filterUtils.createRemoveJsonAttributesResponseBodyFilters(f, existingRoute));
+    existingRoute.setRouteRemoveRequestHeaderFilters(
+        filterUtils.createRemoveRequestHeaderFilters(f, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -645,6 +652,20 @@ public class RouteService {
               });
     }
 
+    if (request.getFilters().getRemoveRequestHeaders() != null
+        && !request.getFilters().getRemoveRequestHeaders().isEmpty()) {
+      request
+          .getFilters()
+          .getRemoveRequestHeaders()
+          .forEach(
+              filter -> {
+                FilterDefinition filterDefinition =
+                    definitionUtils.createFilterDefinition(
+                        REMOVE_REQUEST_HEADER, filter.getName());
+                filters.add(filterDefinition);
+              });
+    }
+
     routeDefinition.setPredicates(predicates);
     routeDefinition.setFilters(filters);
     return routeDefinition;
@@ -931,6 +952,18 @@ public class RouteService {
               .toList();
     }
 
+    List<RemoveRequestHeaderResponse> removeRequestHeaderResponses = new ArrayList<>();
+    if (route.getRouteRemoveRequestHeaderFilters() != null) {
+      removeRequestHeaderResponses =
+          route.getRouteRemoveRequestHeaderFilters().stream()
+              .map(
+                  filter ->
+                      RemoveRequestHeaderResponse.builder()
+                          .name(filter.getName())
+                          .build())
+              .toList();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -965,6 +998,7 @@ public class RouteService {
                 .prefixPaths(prefixPathResponses)
                 .redirects(redirectToResponses)
                 .removeJsonAttributesResponseBody(removeJsonAttributesResponses)
+                .removeRequestHeaders(removeRequestHeaderResponses)
                 .build())
         .build();
   }
