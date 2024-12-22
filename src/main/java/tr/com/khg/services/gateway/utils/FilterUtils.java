@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import tr.com.khg.services.gateway.entity.*;
 import tr.com.khg.services.gateway.model.request.Filters;
+import tr.com.khg.services.gateway.model.request.RequestRateLimiterRequest;
 
 @Component
 @RequiredArgsConstructor
@@ -257,10 +258,12 @@ public class FilterUtils {
     }
 
     return filters.getRemoveResponseHeaders().stream()
-        .map(filter -> RouteRemoveResponseHeaderFilter.builder()
-            .route(route)
-            .name(filter.getName())
-            .build())
+        .map(
+            filter ->
+                RouteRemoveResponseHeaderFilter.builder()
+                    .route(route)
+                    .name(filter.getName())
+                    .build())
         .collect(Collectors.toList());
   }
 
@@ -271,11 +274,30 @@ public class FilterUtils {
     }
 
     return filters.getRequestHeaderSizes().stream()
-        .map(filter -> RouteRequestHeaderSizeFilter.builder()
-            .route(route)
-            .maxSize(filter.getMaxSize())
-            .errorHeaderName(filter.getErrorHeaderName())
-            .build())
+        .map(
+            filter ->
+                RouteRequestHeaderSizeFilter.builder()
+                    .route(route)
+                    .maxSize(filter.getMaxSize())
+                    .errorHeaderName(filter.getErrorHeaderName())
+                    .build())
         .collect(Collectors.toList());
+  }
+
+  public RouteRequestRateLimiterFilter createRequestRateLimiterFilter(
+      Filters filters, Route route) {
+    if (filters == null || filters.getRequestRateLimiter() == null) {
+      return null;
+    }
+
+    RequestRateLimiterRequest filter = filters.getRequestRateLimiter();
+    return RouteRequestRateLimiterFilter.builder()
+        .route(route)
+        .replenishRate(filter.getReplenishRate())
+        .burstCapacity(filter.getBurstCapacity())
+        .requestedTokens(filter.getRequestedTokens())
+        .keyResolver(filter.getKeyResolver())
+        .headerName(filter.getHeaderName())
+        .build();
   }
 }

@@ -21,6 +21,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import tr.com.khg.services.gateway.entity.*;
 import tr.com.khg.services.gateway.entity.enums.DedupeStrategy;
+import tr.com.khg.services.gateway.entity.enums.KeyResolvers;
 import tr.com.khg.services.gateway.exception.DuplicateRouteException;
 import tr.com.khg.services.gateway.model.request.*;
 import tr.com.khg.services.gateway.model.response.*;
@@ -68,6 +69,7 @@ public class RouteService {
   private final RouteRemoveRequestParameterFilterRepository removeRequestParameterFilterRepository;
   private final RouteRemoveResponseHeaderFilterRepository removeResponseHeaderFilterRepository;
   private final RouteRequestHeaderSizeFilterRepository requestHeaderSizeFilterRepository;
+  private final RouteRequestRateLimiterFilterRepository requestRateLimiterFilterRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -234,6 +236,7 @@ public class RouteService {
             .routeRemoveRequestParameterFilters(new ArrayList<>())
             .routeRemoveResponseHeaderFilters(new ArrayList<>())
             .routeRequestHeaderSizeFilters(new ArrayList<>())
+            .routeRequestRateLimiterFilter(null)
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -272,8 +275,8 @@ public class RouteService {
         filterUtils.createRemoveRequestParameterFilters(f, route));
     route.setRouteRemoveResponseHeaderFilters(
         filterUtils.createRemoveResponseHeaderFilters(f, route));
-    route.setRouteRequestHeaderSizeFilters(
-        filterUtils.createRequestHeaderSizeFilters(f, route));
+    route.setRouteRequestHeaderSizeFilters(filterUtils.createRequestHeaderSizeFilters(f, route));
+    route.setRouteRequestRateLimiterFilter(filterUtils.createRequestRateLimiterFilter(f, route));
 
     return route;
   }
@@ -321,6 +324,7 @@ public class RouteService {
     removeRequestParameterFilterRepository.deleteByRoute(existingRoute);
     removeResponseHeaderFilterRepository.deleteByRoute(existingRoute);
     requestHeaderSizeFilterRepository.deleteByRoute(existingRoute);
+    requestRateLimiterFilterRepository.deleteByRoute(existingRoute);
 
     Predications p = request.getPredications();
     existingRoute.setRouteCookiePredications(
@@ -369,6 +373,8 @@ public class RouteService {
         filterUtils.createRemoveResponseHeaderFilters(f, existingRoute));
     existingRoute.setRouteRequestHeaderSizeFilters(
         filterUtils.createRequestHeaderSizeFilters(f, existingRoute));
+    existingRoute.setRouteRequestRateLimiterFilter(
+        filterUtils.createRequestRateLimiterFilter(f, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -681,8 +687,7 @@ public class RouteService {
           .forEach(
               filter -> {
                 FilterDefinition filterDefinition =
-                    definitionUtils.createFilterDefinition(
-                        REMOVE_REQUEST_HEADER, filter.getName());
+                    definitionUtils.createFilterDefinition(REMOVE_REQUEST_HEADER, filter.getName());
                 filters.add(filterDefinition);
               });
     }
@@ -724,11 +729,30 @@ public class RouteService {
               filter -> {
                 FilterDefinition filterDefinition =
                     definitionUtils.createFilterDefinition(
-                        REQUEST_HEADER_SIZE,
-                        filter.getMaxSize(),
-                        filter.getErrorHeaderName());
+                        REQUEST_HEADER_SIZE, filter.getMaxSize(), filter.getErrorHeaderName());
                 filters.add(filterDefinition);
               });
+    }
+
+    if (request.getFilters().getRequestRateLimiter() != null) {
+      FilterDefinition filterDefinition =
+          definitionUtils.createFilterDefinition(
+              REQUEST_RATE_LIMITER,
+              String.valueOf(request.getFilters().getRequestRateLimiter().getReplenishRate()),
+              String.valueOf(request.getFilters().getRequestRateLimiter().getBurstCapacity()),
+              String.valueOf(request.getFilters().getRequestRateLimiter().getRequestedTokens()),
+              request.getFilters().getRequestRateLimiter().getKeyResolver().getResolverName());
+
+      if (KeyResolvers.CUSTOM_HEADER.equals(
+          request.getFilters().getRequestRateLimiter().getKeyResolver())) {
+        String headerName = request.getFilters().getRequestRateLimiter().getHeaderName();
+        if (headerName == null || headerName.isEmpty()) {
+          headerName = "X-Rate-Limit-Key";
+        }
+        routeDefinition.getMetadata().put("rate-limiter-header", headerName);
+      }
+
+      filters.add(filterDefinition);
     }
 
     routeDefinition.setPredicates(predicates);
@@ -1021,11 +1045,7 @@ public class RouteService {
     if (route.getRouteRemoveRequestHeaderFilters() != null) {
       removeRequestHeaderResponses =
           route.getRouteRemoveRequestHeaderFilters().stream()
-              .map(
-                  filter ->
-                      RemoveRequestHeaderResponse.builder()
-                          .name(filter.getName())
-                          .build())
+              .map(filter -> RemoveRequestHeaderResponse.builder().name(filter.getName()).build())
               .toList();
     }
 
@@ -1034,10 +1054,7 @@ public class RouteService {
       removeRequestParameterResponses =
           route.getRouteRemoveRequestParameterFilters().stream()
               .map(
-                  filter ->
-                      RemoveRequestParameterResponse.builder()
-                          .name(filter.getName())
-                          .build())
+                  filter -> RemoveRequestParameterResponse.builder().name(filter.getName()).build())
               .toList();
     }
 
@@ -1045,11 +1062,7 @@ public class RouteService {
     if (route.getRouteRemoveResponseHeaderFilters() != null) {
       removeResponseHeaderResponses =
           route.getRouteRemoveResponseHeaderFilters().stream()
-              .map(
-                  filter ->
-                      RemoveResponseHeaderResponse.builder()
-                          .name(filter.getName())
-                          .build())
+              .map(filter -> RemoveResponseHeaderResponse.builder().name(filter.getName()).build())
               .toList();
     }
 
@@ -1064,6 +1077,18 @@ public class RouteService {
                           .errorHeaderName(filter.getErrorHeaderName())
                           .build())
               .toList();
+    }
+
+    RequestRateLimiterResponse requestRateLimiterResponse = null;
+    if (route.getRouteRequestRateLimiterFilter() != null) {
+      requestRateLimiterResponse =
+          RequestRateLimiterResponse.builder()
+              .replenishRate(route.getRouteRequestRateLimiterFilter().getReplenishRate())
+              .burstCapacity(route.getRouteRequestRateLimiterFilter().getBurstCapacity())
+              .requestedTokens(route.getRouteRequestRateLimiterFilter().getRequestedTokens())
+              .keyResolver(route.getRouteRequestRateLimiterFilter().getKeyResolver())
+              .headerName(route.getRouteRequestRateLimiterFilter().getHeaderName())
+              .build();
     }
 
     return RouteResponse.builder()
@@ -1104,6 +1129,7 @@ public class RouteService {
                 .removeRequestParameters(removeRequestParameterResponses)
                 .removeResponseHeaders(removeResponseHeaderResponses)
                 .requestHeaderSizes(requestHeaderSizeResponses)
+                .requestRateLimiter(requestRateLimiterResponse)
                 .build())
         .build();
   }

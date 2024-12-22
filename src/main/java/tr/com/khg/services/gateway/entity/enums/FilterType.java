@@ -27,7 +27,13 @@ public enum FilterType {
   REMOVE_REQUEST_HEADER("RemoveRequestHeader", "name"),
   REMOVE_REQUEST_PARAMETER("RemoveRequestParameter", "name"),
   REMOVE_RESPONSE_HEADER("RemoveResponseHeader", "name"),
-  REQUEST_HEADER_SIZE("RequestHeaderSize", "maxSize", "errorHeaderName");
+  REQUEST_HEADER_SIZE("RequestHeaderSize", "maxSize", "errorHeaderName"),
+  REQUEST_RATE_LIMITER(
+      "RequestRateLimiter",
+      "redis-rate-limiter.replenishRate",
+      "redis-rate-limiter.burstCapacity",
+      "redis-rate-limiter.requestedTokens",
+      "key-resolver");
 
   private final String type;
   private final String[] args;
