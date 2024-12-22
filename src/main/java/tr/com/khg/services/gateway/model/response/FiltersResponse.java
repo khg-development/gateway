@@ -25,4 +25,5 @@ public class FiltersResponse {
   private List<RemoveJsonAttributesResponseBodyResponse> removeJsonAttributesResponseBody;
   private List<RemoveRequestHeaderResponse> removeRequestHeaders;
   private List<RemoveRequestParameterResponse> removeRequestParameters;
+  private List<RemoveResponseHeaderResponse> removeResponseHeaders;
 }

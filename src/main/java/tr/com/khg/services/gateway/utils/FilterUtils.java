@@ -249,4 +249,18 @@ public class FilterUtils {
                     .build())
         .collect(Collectors.toList());
   }
+
+  public List<RouteRemoveResponseHeaderFilter> createRemoveResponseHeaderFilters(
+      Filters filters, Route route) {
+    if (filters == null || filters.getRemoveResponseHeaders() == null) {
+      return new ArrayList<>();
+    }
+
+    return filters.getRemoveResponseHeaders().stream()
+        .map(filter -> RouteRemoveResponseHeaderFilter.builder()
+            .route(route)
+            .name(filter.getName())
+            .build())
+        .collect(Collectors.toList());
+  }
 }
