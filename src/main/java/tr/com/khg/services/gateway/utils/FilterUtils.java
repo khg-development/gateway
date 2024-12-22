@@ -200,4 +200,21 @@ public class FilterUtils {
                     .build())
         .collect(Collectors.toList());
   }
+
+  public List<RouteRemoveJsonAttributesResponseBodyFilter>
+      createRemoveJsonAttributesResponseBodyFilters(Filters filters, Route route) {
+    if (filters == null || filters.getRemoveJsonAttributesResponseBody() == null) {
+      return new ArrayList<>();
+    }
+
+    return filters.getRemoveJsonAttributesResponseBody().stream()
+        .map(
+            filter ->
+                RouteRemoveJsonAttributesResponseBodyFilter.builder()
+                    .route(route)
+                    .attributes(String.join(",", filter.getAttributes()))
+                    .recursive(filter.isRecursive())
+                    .build())
+        .collect(Collectors.toList());
+  }
 }

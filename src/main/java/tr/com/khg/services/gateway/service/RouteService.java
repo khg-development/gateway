@@ -62,6 +62,8 @@ public class RouteService {
   private final RouteMapRequestHeaderFilterRepository mapRequestHeaderFilterRepository;
   private final RoutePrefixPathFilterRepository prefixPathFilterRepository;
   private final RouteRedirectToFilterRepository redirectToFilterRepository;
+  private final RouteRemoveJsonAttributesResponseBodyFilterRepository
+      removeJsonAttributesFilterRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -223,6 +225,7 @@ public class RouteService {
             .routeMapRequestHeaderFilters(new ArrayList<>())
             .routePrefixPathFilters(new ArrayList<>())
             .routeRedirectToFilters(new ArrayList<>())
+            .routeRemoveJsonAttributesResponseBodyFilters(new ArrayList<>())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -253,6 +256,8 @@ public class RouteService {
     route.setRouteMapRequestHeaderFilters(filterUtils.createMapRequestHeaderFilters(f, route));
     route.setRoutePrefixPathFilters(filterUtils.createPrefixPathFilters(f, route));
     route.setRouteRedirectToFilters(filterUtils.createRedirectToFilters(f, route));
+    route.setRouteRemoveJsonAttributesResponseBodyFilters(
+        filterUtils.createRemoveJsonAttributesResponseBodyFilters(f, route));
 
     return route;
   }
@@ -295,6 +300,7 @@ public class RouteService {
     mapRequestHeaderFilterRepository.deleteByRoute(existingRoute);
     prefixPathFilterRepository.deleteByRoute(existingRoute);
     redirectToFilterRepository.deleteByRoute(existingRoute);
+    removeJsonAttributesFilterRepository.deleteByRoute(existingRoute);
 
     Predications p = request.getPredications();
     existingRoute.setRouteCookiePredications(
@@ -333,6 +339,8 @@ public class RouteService {
         filterUtils.createMapRequestHeaderFilters(f, existingRoute));
     existingRoute.setRoutePrefixPathFilters(filterUtils.createPrefixPathFilters(f, existingRoute));
     existingRoute.setRouteRedirectToFilters(filterUtils.createRedirectToFilters(f, existingRoute));
+    existingRoute.setRouteRemoveJsonAttributesResponseBodyFilters(
+        filterUtils.createRemoveJsonAttributesResponseBodyFilters(f, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -621,6 +629,22 @@ public class RouteService {
               });
     }
 
+    if (request.getFilters().getRemoveJsonAttributesResponseBody() != null
+        && !request.getFilters().getRemoveJsonAttributesResponseBody().isEmpty()) {
+      request
+          .getFilters()
+          .getRemoveJsonAttributesResponseBody()
+          .forEach(
+              filter -> {
+                FilterDefinition filterDefinition =
+                    definitionUtils.createFilterDefinition(
+                        REMOVE_JSON_ATTRIBUTES_RESPONSE_BODY,
+                        String.join(",", filter.getAttributes()),
+                        String.valueOf(filter.isRecursive()));
+                filters.add(filterDefinition);
+              });
+    }
+
     routeDefinition.setPredicates(predicates);
     routeDefinition.setFilters(filters);
     return routeDefinition;
@@ -890,6 +914,23 @@ public class RouteService {
               .toList();
     }
 
+    List<RemoveJsonAttributesResponseBodyResponse> removeJsonAttributesResponses =
+        new ArrayList<>();
+    if (route.getRouteRemoveJsonAttributesResponseBodyFilters() != null) {
+      removeJsonAttributesResponses =
+          route.getRouteRemoveJsonAttributesResponseBodyFilters().stream()
+              .map(
+                  filter ->
+                      RemoveJsonAttributesResponseBodyResponse.builder()
+                          .attributes(
+                              filter.getAttributes() != null
+                                  ? Arrays.asList(filter.getAttributes().split(","))
+                                  : null)
+                          .recursive(filter.isRecursive())
+                          .build())
+              .toList();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -923,6 +964,7 @@ public class RouteService {
                 .mapRequestHeaders(mapRequestHeaderResponses)
                 .prefixPaths(prefixPathResponses)
                 .redirects(redirectToResponses)
+                .removeJsonAttributesResponseBody(removeJsonAttributesResponses)
                 .build())
         .build();
   }

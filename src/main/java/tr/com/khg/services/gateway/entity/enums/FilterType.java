@@ -21,7 +21,9 @@ public enum FilterType {
   MAP_REQUEST_HEADER("MapRequestHeader", "fromHeader", "toHeader"),
   PREFIX_PATH("PrefixPath", "prefix"),
   PRESERVE_HOST_HEADER("PreserveHostHeader"),
-  REDIRECT_TO("RedirectTo", "status", "url", "includeRequestParams");
+  REDIRECT_TO("RedirectTo", "status", "url", "includeRequestParams"),
+  REMOVE_JSON_ATTRIBUTES_RESPONSE_BODY(
+      "RemoveJsonAttributesResponseBody", "attributes", "recursive");
 
   private final String type;
   private final String[] args;

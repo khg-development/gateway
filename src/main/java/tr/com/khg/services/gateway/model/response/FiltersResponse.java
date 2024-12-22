@@ -22,4 +22,5 @@ public class FiltersResponse {
   private List<MapRequestHeaderResponse> mapRequestHeaders;
   private List<PrefixPathResponse> prefixPaths;
   private List<RedirectToResponse> redirects;
+  private List<RemoveJsonAttributesResponseBodyResponse> removeJsonAttributesResponseBody;
 }
