@@ -263,4 +263,19 @@ public class FilterUtils {
             .build())
         .collect(Collectors.toList());
   }
+
+  public List<RouteRequestHeaderSizeFilter> createRequestHeaderSizeFilters(
+      Filters filters, Route route) {
+    if (filters == null || filters.getRequestHeaderSizes() == null) {
+      return new ArrayList<>();
+    }
+
+    return filters.getRequestHeaderSizes().stream()
+        .map(filter -> RouteRequestHeaderSizeFilter.builder()
+            .route(route)
+            .maxSize(filter.getMaxSize())
+            .errorHeaderName(filter.getErrorHeaderName())
+            .build())
+        .collect(Collectors.toList());
+  }
 }

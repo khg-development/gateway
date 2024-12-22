@@ -26,4 +26,5 @@ public class Filters {
   private List<RemoveRequestHeaderRequest> removeRequestHeaders;
   private List<RemoveRequestParameterRequest> removeRequestParameters;
   private List<RemoveResponseHeaderRequest> removeResponseHeaders;
+  private List<RequestHeaderSizeRequest> requestHeaderSizes;
 }

@@ -67,6 +67,7 @@ public class RouteService {
   private final RouteRemoveRequestHeaderFilterRepository removeRequestHeaderFilterRepository;
   private final RouteRemoveRequestParameterFilterRepository removeRequestParameterFilterRepository;
   private final RouteRemoveResponseHeaderFilterRepository removeResponseHeaderFilterRepository;
+  private final RouteRequestHeaderSizeFilterRepository requestHeaderSizeFilterRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -232,6 +233,7 @@ public class RouteService {
             .routeRemoveRequestHeaderFilters(new ArrayList<>())
             .routeRemoveRequestParameterFilters(new ArrayList<>())
             .routeRemoveResponseHeaderFilters(new ArrayList<>())
+            .routeRequestHeaderSizeFilters(new ArrayList<>())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -270,6 +272,8 @@ public class RouteService {
         filterUtils.createRemoveRequestParameterFilters(f, route));
     route.setRouteRemoveResponseHeaderFilters(
         filterUtils.createRemoveResponseHeaderFilters(f, route));
+    route.setRouteRequestHeaderSizeFilters(
+        filterUtils.createRequestHeaderSizeFilters(f, route));
 
     return route;
   }
@@ -316,6 +320,7 @@ public class RouteService {
     removeRequestHeaderFilterRepository.deleteByRoute(existingRoute);
     removeRequestParameterFilterRepository.deleteByRoute(existingRoute);
     removeResponseHeaderFilterRepository.deleteByRoute(existingRoute);
+    requestHeaderSizeFilterRepository.deleteByRoute(existingRoute);
 
     Predications p = request.getPredications();
     existingRoute.setRouteCookiePredications(
@@ -362,6 +367,8 @@ public class RouteService {
         filterUtils.createRemoveRequestParameterFilters(f, existingRoute));
     existingRoute.setRouteRemoveResponseHeaderFilters(
         filterUtils.createRemoveResponseHeaderFilters(f, existingRoute));
+    existingRoute.setRouteRequestHeaderSizeFilters(
+        filterUtils.createRequestHeaderSizeFilters(f, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -708,6 +715,22 @@ public class RouteService {
               });
     }
 
+    if (request.getFilters().getRequestHeaderSizes() != null
+        && !request.getFilters().getRequestHeaderSizes().isEmpty()) {
+      request
+          .getFilters()
+          .getRequestHeaderSizes()
+          .forEach(
+              filter -> {
+                FilterDefinition filterDefinition =
+                    definitionUtils.createFilterDefinition(
+                        REQUEST_HEADER_SIZE,
+                        filter.getMaxSize(),
+                        filter.getErrorHeaderName());
+                filters.add(filterDefinition);
+              });
+    }
+
     routeDefinition.setPredicates(predicates);
     routeDefinition.setFilters(filters);
     return routeDefinition;
@@ -1030,6 +1053,19 @@ public class RouteService {
               .toList();
     }
 
+    List<RequestHeaderSizeResponse> requestHeaderSizeResponses = new ArrayList<>();
+    if (route.getRouteRequestHeaderSizeFilters() != null) {
+      requestHeaderSizeResponses =
+          route.getRouteRequestHeaderSizeFilters().stream()
+              .map(
+                  filter ->
+                      RequestHeaderSizeResponse.builder()
+                          .maxSize(filter.getMaxSize())
+                          .errorHeaderName(filter.getErrorHeaderName())
+                          .build())
+              .toList();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -1067,6 +1103,7 @@ public class RouteService {
                 .removeRequestHeaders(removeRequestHeaderResponses)
                 .removeRequestParameters(removeRequestParameterResponses)
                 .removeResponseHeaders(removeResponseHeaderResponses)
+                .requestHeaderSizes(requestHeaderSizeResponses)
                 .build())
         .build();
   }

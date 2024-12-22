@@ -26,7 +26,8 @@ public enum FilterType {
       "RemoveJsonAttributesResponseBody", "attributes", "recursive"),
   REMOVE_REQUEST_HEADER("RemoveRequestHeader", "name"),
   REMOVE_REQUEST_PARAMETER("RemoveRequestParameter", "name"),
-  REMOVE_RESPONSE_HEADER("RemoveResponseHeader", "name");
+  REMOVE_RESPONSE_HEADER("RemoveResponseHeader", "name"),
+  REQUEST_HEADER_SIZE("RequestHeaderSize", "maxSize", "errorHeaderName");
 
   private final String type;
   private final String[] args;

@@ -143,6 +143,9 @@ public class Route implements Serializable {
   @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
   private List<RouteRemoveResponseHeaderFilter> routeRemoveResponseHeaderFilters = new ArrayList<>();
 
+  @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+  private List<RouteRequestHeaderSizeFilter> routeRequestHeaderSizeFilters = new ArrayList<>();
+
   public void clearPredications() {
     routeCookiePredications.clear();
     routeHeaderPredications.clear();
@@ -169,5 +172,6 @@ public class Route implements Serializable {
     routeRemoveRequestHeaderFilters.clear();
     routeRemoveRequestParameterFilters.clear();
     routeRemoveResponseHeaderFilters.clear();
+    routeRequestHeaderSizeFilters.clear();
   }
 }
