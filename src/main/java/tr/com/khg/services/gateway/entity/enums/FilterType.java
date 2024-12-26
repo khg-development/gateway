@@ -33,7 +33,13 @@ public enum FilterType {
       "redis-rate-limiter.replenishRate",
       "redis-rate-limiter.burstCapacity",
       "redis-rate-limiter.requestedTokens",
-      "key-resolver");
+      "key-resolver"),
+  REWRITE_LOCATION_RESPONSE_HEADER(
+      "RewriteLocationResponseHeader",
+      "stripVersionMode",
+      "locationHeaderName",
+      "hostValue",
+      "protocolsRegex");
 
   private final String type;
   private final String[] args;

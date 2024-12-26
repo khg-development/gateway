@@ -300,4 +300,21 @@ public class FilterUtils {
         .headerName(filter.getHeaderName())
         .build();
   }
+
+  public List<RouteRewriteLocationResponseHeaderFilter> createRewriteLocationResponseHeaderFilters(
+      Filters filters, Route route) {
+    if (filters == null || filters.getRewriteLocationResponseHeaders() == null) {
+      return new ArrayList<>();
+    }
+
+    return filters.getRewriteLocationResponseHeaders().stream()
+        .map(filter -> RouteRewriteLocationResponseHeaderFilter.builder()
+            .route(route)
+            .stripVersionMode(filter.getStripVersionMode())
+            .locationHeaderName(filter.getLocationHeaderName())
+            .hostValue(filter.getHostValue())
+            .protocolsRegex(filter.getProtocolsRegex())
+            .build())
+        .collect(Collectors.toList());
+  }
 }

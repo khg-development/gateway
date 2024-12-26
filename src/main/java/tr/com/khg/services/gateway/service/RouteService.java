@@ -70,6 +70,8 @@ public class RouteService {
   private final RouteRemoveResponseHeaderFilterRepository removeResponseHeaderFilterRepository;
   private final RouteRequestHeaderSizeFilterRepository requestHeaderSizeFilterRepository;
   private final RouteRequestRateLimiterFilterRepository requestRateLimiterFilterRepository;
+  private final RouteRewriteLocationResponseHeaderFilterRepository
+      rewriteLocationResponseHeaderFilterRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -237,6 +239,7 @@ public class RouteService {
             .routeRemoveResponseHeaderFilters(new ArrayList<>())
             .routeRequestHeaderSizeFilters(new ArrayList<>())
             .routeRequestRateLimiterFilter(null)
+            .routeRewriteLocationResponseHeaderFilters(new ArrayList<>())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -277,6 +280,8 @@ public class RouteService {
         filterUtils.createRemoveResponseHeaderFilters(f, route));
     route.setRouteRequestHeaderSizeFilters(filterUtils.createRequestHeaderSizeFilters(f, route));
     route.setRouteRequestRateLimiterFilter(filterUtils.createRequestRateLimiterFilter(f, route));
+    route.setRouteRewriteLocationResponseHeaderFilters(
+        filterUtils.createRewriteLocationResponseHeaderFilters(f, route));
 
     return route;
   }
@@ -325,6 +330,7 @@ public class RouteService {
     removeResponseHeaderFilterRepository.deleteByRoute(existingRoute);
     requestHeaderSizeFilterRepository.deleteByRoute(existingRoute);
     requestRateLimiterFilterRepository.deleteByRoute(existingRoute);
+    rewriteLocationResponseHeaderFilterRepository.deleteByRoute(existingRoute);
 
     Predications p = request.getPredications();
     existingRoute.setRouteCookiePredications(
@@ -375,6 +381,8 @@ public class RouteService {
         filterUtils.createRequestHeaderSizeFilters(f, existingRoute));
     existingRoute.setRouteRequestRateLimiterFilter(
         filterUtils.createRequestRateLimiterFilter(f, existingRoute));
+    existingRoute.setRouteRewriteLocationResponseHeaderFilters(
+        filterUtils.createRewriteLocationResponseHeaderFilters(f, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -755,6 +763,24 @@ public class RouteService {
       filters.add(filterDefinition);
     }
 
+    if (request.getFilters().getRewriteLocationResponseHeaders() != null
+        && !request.getFilters().getRewriteLocationResponseHeaders().isEmpty()) {
+      request
+          .getFilters()
+          .getRewriteLocationResponseHeaders()
+          .forEach(
+              filter -> {
+                FilterDefinition filterDefinition =
+                    definitionUtils.createFilterDefinition(
+                        REWRITE_LOCATION_RESPONSE_HEADER,
+                        filter.getStripVersionMode().name(),
+                        filter.getLocationHeaderName(),
+                        filter.getHostValue(),
+                        filter.getProtocolsRegex());
+                filters.add(filterDefinition);
+              });
+    }
+
     routeDefinition.setPredicates(predicates);
     routeDefinition.setFilters(filters);
     return routeDefinition;
@@ -1091,6 +1117,22 @@ public class RouteService {
               .build();
     }
 
+    List<RewriteLocationResponseHeaderResponse> rewriteLocationResponseHeaderResponses =
+        new ArrayList<>();
+    if (route.getRouteRewriteLocationResponseHeaderFilters() != null) {
+      rewriteLocationResponseHeaderResponses =
+          route.getRouteRewriteLocationResponseHeaderFilters().stream()
+              .map(
+                  filter ->
+                      RewriteLocationResponseHeaderResponse.builder()
+                          .stripVersionMode(filter.getStripVersionMode())
+                          .locationHeaderName(filter.getLocationHeaderName())
+                          .hostValue(filter.getHostValue())
+                          .protocolsRegex(filter.getProtocolsRegex())
+                          .build())
+              .toList();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -1130,6 +1172,7 @@ public class RouteService {
                 .removeResponseHeaders(removeResponseHeaderResponses)
                 .requestHeaderSizes(requestHeaderSizeResponses)
                 .requestRateLimiter(requestRateLimiterResponse)
+                .rewriteLocationResponseHeaders(rewriteLocationResponseHeaderResponses)
                 .build())
         .build();
   }
