@@ -398,4 +398,19 @@ public class FilterUtils {
                     .build())
         .collect(Collectors.toList());
   }
+
+  public List<RouteSetResponseHeaderFilter> createSetResponseHeaderFilters(
+      Filters filters, Route route) {
+    if (filters == null || filters.getSetResponseHeaders() == null) {
+      return new ArrayList<>();
+    }
+
+    return filters.getSetResponseHeaders().stream()
+        .map(filter -> RouteSetResponseHeaderFilter.builder()
+            .route(route)
+            .name(filter.getName())
+            .value(filter.getValue())
+            .build())
+        .collect(Collectors.toList());
+  }
 }

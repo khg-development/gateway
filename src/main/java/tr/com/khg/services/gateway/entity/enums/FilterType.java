@@ -45,7 +45,8 @@ public enum FilterType {
   REWRITE_RESPONSE_HEADER("RewriteResponseHeader", "name", "regexp", "replacement"),
   SECURE_HEADERS("SecureHeaders"),
   SET_PATH("SetPath", "template"),
-  SET_REQUEST_HEADER("SetRequestHeader", "name", "value");
+  SET_REQUEST_HEADER("SetRequestHeader", "name", "value"),
+  SET_RESPONSE_HEADER("SetResponseHeader", "name", "value");
 
   private final String type;
   private final String[] args;

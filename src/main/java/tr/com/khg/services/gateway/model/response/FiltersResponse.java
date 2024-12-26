@@ -34,4 +34,5 @@ public class FiltersResponse {
   private List<RewriteResponseHeaderResponse> rewriteResponseHeaders;
   private SetPathResponse setPath;
   private List<SetRequestHeaderResponse> setRequestHeaders;
+  private List<SetResponseHeaderResponse> setResponseHeaders;
 }
