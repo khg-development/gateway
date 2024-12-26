@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
 import tr.com.khg.services.gateway.entity.*;
 import tr.com.khg.services.gateway.model.request.Filters;
@@ -435,6 +436,24 @@ public class FilterUtils {
     return RouteStripPrefixFilter.builder()
         .route(route)
         .parts(filters.getStripPrefix().getParts())
+        .build();
+  }
+
+  public RouteRetryFilter createRetryFilter(Filters filters, Route route) {
+    if (filters == null || filters.getRetry() == null) {
+      return null;
+    }
+
+    return RouteRetryFilter.builder()
+        .route(route)
+        .retries(filters.getRetry().getRetries())
+        .statuses(filters.getRetry().getStatuses().stream().map(Enum::name).toList())
+        .methods(filters.getRetry().getMethods().stream().map(HttpMethod::name).toList())
+        .series(filters.getRetry().getSeries().stream().map(Enum::name).toList())
+        .firstBackoff(filters.getRetry().getFirstBackoff())
+        .maxBackoff(filters.getRetry().getMaxBackoff())
+        .factor(filters.getRetry().getFactor())
+        .basedOnPreviousValue(filters.getRetry().getBasedOnPreviousValue())
         .build();
   }
 }

@@ -37,4 +37,5 @@ public class FiltersResponse {
   private List<SetResponseHeaderResponse> setResponseHeaders;
   private SetStatusResponse setStatus;
   private StripPrefixResponse stripPrefix;
+  private RetryResponse retry;
 }

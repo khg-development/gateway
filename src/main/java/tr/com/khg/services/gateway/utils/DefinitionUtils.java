@@ -35,6 +35,11 @@ public class DefinitionUtils {
     return createPredicateDefinition(predicateType, strArgs);
   }
 
+  public FilterDefinition createFilterDefinition(FilterType filterType, Object... args) {
+    String[] strArgs = Arrays.stream(args).map(Object::toString).toArray(String[]::new);
+    return createFilterDefinition(filterType, strArgs);
+  }
+
   public FilterDefinition createFilterDefinition(FilterType filterType, String... args) {
     FilterDefinition headerFilter = new FilterDefinition();
     headerFilter.setName(filterType.getType());

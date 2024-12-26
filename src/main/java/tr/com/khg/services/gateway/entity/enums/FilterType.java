@@ -48,7 +48,17 @@ public enum FilterType {
   SET_REQUEST_HEADER("SetRequestHeader", "name", "value"),
   SET_RESPONSE_HEADER("SetResponseHeader", "name", "value"),
   SET_STATUS("SetStatus", "status"),
-  STRIP_PREFIX("StripPrefix", "parts");
+  STRIP_PREFIX("StripPrefix", "parts"),
+  RETRY(
+      "Retry",
+      "retries",
+      "statuses",
+      "methods",
+      "series",
+      "backoff.firstBackoff",
+      "backoff.maxBackoff",
+      "backoff.factor",
+      "backoff.basedOnPreviousValue");
 
   private final String type;
   private final String[] args;

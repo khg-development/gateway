@@ -37,4 +37,5 @@ public class Filters {
   private List<SetResponseHeaderRequest> setResponseHeaders;
   private SetStatusRequest setStatus;
   private StripPrefixRequest stripPrefix;
+  private RetryRequest retry;
 }

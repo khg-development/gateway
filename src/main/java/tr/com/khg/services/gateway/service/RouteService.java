@@ -3,7 +3,6 @@ package tr.com.khg.services.gateway.service;
 import static tr.com.khg.services.gateway.entity.enums.FilterType.*;
 import static tr.com.khg.services.gateway.entity.enums.PredicateType.*;
 
-import jakarta.annotation.PostConstruct;
 import java.net.URI;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -15,6 +14,7 @@ import org.springframework.cloud.gateway.handler.predicate.PredicateDefinition;
 import org.springframework.cloud.gateway.route.RouteDefinition;
 import org.springframework.cloud.gateway.route.RouteDefinitionWriter;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
@@ -81,33 +81,7 @@ public class RouteService {
   private final RouteSetResponseHeaderFilterRepository setResponseHeaderFilterRepository;
   private final RouteSetStatusFilterRepository setStatusFilterRepository;
   private final RouteStripPrefixFilterRepository stripPrefixFilterRepository;
-
-  @PostConstruct
-  public void loadRoutesFromDatabase() {
-    log.info("Loading routes from database");
-
-    Mono.fromCallable(() -> routeRepository.findByEnabled(true))
-        .subscribeOn(Schedulers.boundedElastic())
-        .flatMapIterable(routes -> routes)
-        .doOnNext(
-            route ->
-                log.debug("Loading route: {} - {}", route.getRouteId(), route.getRouteDefinition()))
-        .flatMap(
-            route ->
-                routeDefinitionWriter
-                    .save(Mono.just(route.getRouteDefinition()))
-                    .doOnSuccess(
-                        v -> log.debug("Route loaded successfully: {}", route.getRouteId()))
-                    .doOnError(
-                        error ->
-                            log.error(
-                                "Error loading route {}: {}",
-                                route.getRouteId(),
-                                error.getMessage())))
-        .doOnComplete(() -> log.info("All routes loaded successfully"))
-        .doOnError(error -> log.error("Error loading routes: {}", error.getMessage()))
-        .subscribe();
-  }
+  private final RouteRetryFilterRepository retryFilterRepository;
 
   @Transactional
   public Mono<RouteResponse> addRoute(String proxyName, RouteRequest request) {
@@ -258,6 +232,7 @@ public class RouteService {
             .routeSetResponseHeaderFilters(new ArrayList<>())
             .routeSetStatusFilter(null)
             .routeStripPrefixFilter(null)
+            .routeRetryFilter(null)
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -310,6 +285,7 @@ public class RouteService {
     route.setRouteSetResponseHeaderFilters(filterUtils.createSetResponseHeaderFilters(f, route));
     route.setRouteSetStatusFilter(filterUtils.createSetStatusFilter(f, route));
     route.setRouteStripPrefixFilter(filterUtils.createStripPrefixFilter(f, route));
+    route.setRouteRetryFilter(filterUtils.createRetryFilter(f, route));
 
     return route;
   }
@@ -368,6 +344,7 @@ public class RouteService {
     setResponseHeaderFilterRepository.deleteByRoute(existingRoute);
     setStatusFilterRepository.deleteByRoute(existingRoute);
     stripPrefixFilterRepository.deleteByRoute(existingRoute);
+    retryFilterRepository.deleteByRoute(existingRoute);
 
     Predications p = request.getPredications();
     existingRoute.setRouteCookiePredications(
@@ -433,6 +410,7 @@ public class RouteService {
         filterUtils.createSetResponseHeaderFilters(f, existingRoute));
     existingRoute.setRouteSetStatusFilter(filterUtils.createSetStatusFilter(f, existingRoute));
     existingRoute.setRouteStripPrefixFilter(filterUtils.createStripPrefixFilter(f, existingRoute));
+    existingRoute.setRouteRetryFilter(filterUtils.createRetryFilter(f, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -929,6 +907,35 @@ public class RouteService {
       filters.add(filterDefinition);
     }
 
+    if (request.getFilters().getRetry() != null) {
+      RetryRequest retry = request.getFilters().getRetry();
+      String statuses = null;
+      if (retry.getStatuses() != null && !retry.getStatuses().isEmpty()) {
+        statuses =
+            retry.getStatuses().stream().map(HttpStatus::name).collect(Collectors.joining(","));
+      }
+      String methods = null;
+      if (retry.getMethods() != null && !retry.getMethods().isEmpty()) {
+        methods = retry.getMethods().stream().map(String::valueOf).collect(Collectors.joining(","));
+      }
+      String series = null;
+      if (retry.getSeries() != null && !retry.getSeries().isEmpty()) {
+        series = retry.getSeries().stream().map(String::valueOf).collect(Collectors.joining(","));
+      }
+      FilterDefinition filterDefinition =
+          definitionUtils.createFilterDefinition(
+              RETRY,
+              retry.getRetries(),
+              statuses,
+              methods,
+              series,
+              retry.getFirstBackoff(),
+              retry.getMaxBackoff(),
+              retry.getFactor(),
+              retry.getBasedOnPreviousValue());
+      filters.add(filterDefinition);
+    }
+
     routeDefinition.setPredicates(predicates);
     routeDefinition.setFilters(filters);
     return routeDefinition;
@@ -1365,6 +1372,38 @@ public class RouteService {
           StripPrefixResponse.builder().parts(route.getRouteStripPrefixFilter().getParts()).build();
     }
 
+    RetryResponse retryResponse = null;
+    if (route.getRouteRetryFilter() != null) {
+      //      List<String> statuses = null;
+      //      if (route.getRouteRetryFilter().getStatuses() != null
+      //          && !route.getRouteRetryFilter().getStatuses().isEmpty()) {
+      //        statuses =
+      // route.getRouteRetryFilter().getStatuses().stream().map(Enum::name).toList();
+      //      }
+      //      List<String> methods = null;
+      //      if (route.getRouteRetryFilter().getMethods() != null
+      //          && !route.getRouteRetryFilter().getMethods().isEmpty()) {
+      //        methods =
+      // route.getRouteRetryFilter().getMethods().stream().map(HttpMethod::name).toList();
+      //      }
+      //      List<String> series = null;
+      //      if (route.getRouteRetryFilter().getSeries() != null
+      //          && !route.getRouteRetryFilter().getSeries().isEmpty()) {
+      //        series = route.getRouteRetryFilter().getSeries().stream().map(Enum::name).toList();
+      //      }
+      retryResponse =
+          RetryResponse.builder()
+              .retries(route.getRouteRetryFilter().getRetries())
+              .statuses(route.getRouteRetryFilter().getStatuses())
+              .methods(route.getRouteRetryFilter().getMethods())
+              .series(route.getRouteRetryFilter().getSeries())
+              .firstBackoff(route.getRouteRetryFilter().getFirstBackoff())
+              .maxBackoff(route.getRouteRetryFilter().getMaxBackoff())
+              .factor(route.getRouteRetryFilter().getFactor())
+              .basedOnPreviousValue(route.getRouteRetryFilter().getBasedOnPreviousValue())
+              .build();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -1414,6 +1453,7 @@ public class RouteService {
                 .setResponseHeaders(setResponseHeaderResponses)
                 .setStatus(setStatusResponse)
                 .stripPrefix(stripPrefixResponse)
+                .retry(retryResponse)
                 .build())
         .build();
   }
