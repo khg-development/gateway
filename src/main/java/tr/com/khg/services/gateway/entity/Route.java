@@ -182,6 +182,9 @@ public class Route implements Serializable {
   @OneToOne(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
   private RouteSetStatusFilter routeSetStatusFilter;
 
+  @OneToOne(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+  private RouteStripPrefixFilter routeStripPrefixFilter;
+
   public void clearPredications() {
     routeCookiePredications.clear();
     routeHeaderPredications.clear();
@@ -218,5 +221,6 @@ public class Route implements Serializable {
     routeSetRequestHeaderFilters.clear();
     routeSetResponseHeaderFilters.clear();
     routeSetStatusFilter = null;
+    routeStripPrefixFilter = null;
   }
 }

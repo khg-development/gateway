@@ -426,4 +426,15 @@ public class FilterUtils {
         .status(filters.getSetStatus().getStatus())
         .build();
   }
+
+  public RouteStripPrefixFilter createStripPrefixFilter(Filters filters, Route route) {
+    if (filters == null || filters.getStripPrefix() == null) {
+      return null;
+    }
+
+    return RouteStripPrefixFilter.builder()
+        .route(route)
+        .parts(filters.getStripPrefix().getParts())
+        .build();
+  }
 }

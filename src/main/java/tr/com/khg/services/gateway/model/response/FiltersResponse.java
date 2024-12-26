@@ -36,4 +36,5 @@ public class FiltersResponse {
   private List<SetRequestHeaderResponse> setRequestHeaders;
   private List<SetResponseHeaderResponse> setResponseHeaders;
   private SetStatusResponse setStatus;
+  private StripPrefixResponse stripPrefix;
 }

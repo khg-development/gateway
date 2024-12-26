@@ -36,4 +36,5 @@ public class Filters {
   private List<SetRequestHeaderRequest> setRequestHeaders;
   private List<SetResponseHeaderRequest> setResponseHeaders;
   private SetStatusRequest setStatus;
+  private StripPrefixRequest stripPrefix;
 }

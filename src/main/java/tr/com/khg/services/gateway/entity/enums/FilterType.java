@@ -47,7 +47,8 @@ public enum FilterType {
   SET_PATH("SetPath", "template"),
   SET_REQUEST_HEADER("SetRequestHeader", "name", "value"),
   SET_RESPONSE_HEADER("SetResponseHeader", "name", "value"),
-  SET_STATUS("SetStatus", "status");
+  SET_STATUS("SetStatus", "status"),
+  STRIP_PREFIX("StripPrefix", "parts");
 
   private final String type;
   private final String[] args;

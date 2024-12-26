@@ -80,6 +80,7 @@ public class RouteService {
   private final RouteSetRequestHeaderFilterRepository setRequestHeaderFilterRepository;
   private final RouteSetResponseHeaderFilterRepository setResponseHeaderFilterRepository;
   private final RouteSetStatusFilterRepository setStatusFilterRepository;
+  private final RouteStripPrefixFilterRepository stripPrefixFilterRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -256,6 +257,7 @@ public class RouteService {
             .routeSetRequestHeaderFilters(new ArrayList<>())
             .routeSetResponseHeaderFilters(new ArrayList<>())
             .routeSetStatusFilter(null)
+            .routeStripPrefixFilter(null)
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -307,6 +309,7 @@ public class RouteService {
     route.setRouteSetRequestHeaderFilters(filterUtils.createSetRequestHeaderFilters(f, route));
     route.setRouteSetResponseHeaderFilters(filterUtils.createSetResponseHeaderFilters(f, route));
     route.setRouteSetStatusFilter(filterUtils.createSetStatusFilter(f, route));
+    route.setRouteStripPrefixFilter(filterUtils.createStripPrefixFilter(f, route));
 
     return route;
   }
@@ -364,6 +367,7 @@ public class RouteService {
     setRequestHeaderFilterRepository.deleteByRoute(existingRoute);
     setResponseHeaderFilterRepository.deleteByRoute(existingRoute);
     setStatusFilterRepository.deleteByRoute(existingRoute);
+    stripPrefixFilterRepository.deleteByRoute(existingRoute);
 
     Predications p = request.getPredications();
     existingRoute.setRouteCookiePredications(
@@ -428,6 +432,7 @@ public class RouteService {
     existingRoute.setRouteSetResponseHeaderFilters(
         filterUtils.createSetResponseHeaderFilters(f, existingRoute));
     existingRoute.setRouteSetStatusFilter(filterUtils.createSetStatusFilter(f, existingRoute));
+    existingRoute.setRouteStripPrefixFilter(filterUtils.createStripPrefixFilter(f, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -917,6 +922,13 @@ public class RouteService {
       filters.add(filterDefinition);
     }
 
+    if (request.getFilters().getStripPrefix() != null) {
+      FilterDefinition filterDefinition =
+          definitionUtils.createFilterDefinition(
+              STRIP_PREFIX, request.getFilters().getStripPrefix().getParts().toString());
+      filters.add(filterDefinition);
+    }
+
     routeDefinition.setPredicates(predicates);
     routeDefinition.setFilters(filters);
     return routeDefinition;
@@ -1347,6 +1359,12 @@ public class RouteService {
           SetStatusResponse.builder().status(route.getRouteSetStatusFilter().getStatus()).build();
     }
 
+    StripPrefixResponse stripPrefixResponse = null;
+    if (route.getRouteStripPrefixFilter() != null) {
+      stripPrefixResponse =
+          StripPrefixResponse.builder().parts(route.getRouteStripPrefixFilter().getParts()).build();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -1395,6 +1413,7 @@ public class RouteService {
                 .setRequestHeaders(setRequestHeaderResponses)
                 .setResponseHeaders(setResponseHeaderResponses)
                 .setStatus(setStatusResponse)
+                .stripPrefix(stripPrefixResponse)
                 .build())
         .build();
   }
