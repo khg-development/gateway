@@ -35,4 +35,5 @@ public class Filters {
   private SetPathRequest setPath;
   private List<SetRequestHeaderRequest> setRequestHeaders;
   private List<SetResponseHeaderRequest> setResponseHeaders;
+  private SetStatusRequest setStatus;
 }

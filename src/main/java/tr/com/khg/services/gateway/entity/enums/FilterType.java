@@ -46,7 +46,8 @@ public enum FilterType {
   SECURE_HEADERS("SecureHeaders"),
   SET_PATH("SetPath", "template"),
   SET_REQUEST_HEADER("SetRequestHeader", "name", "value"),
-  SET_RESPONSE_HEADER("SetResponseHeader", "name", "value");
+  SET_RESPONSE_HEADER("SetResponseHeader", "name", "value"),
+  SET_STATUS("SetStatus", "status");
 
   private final String type;
   private final String[] args;

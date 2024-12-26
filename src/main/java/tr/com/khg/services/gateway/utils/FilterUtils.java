@@ -406,11 +406,24 @@ public class FilterUtils {
     }
 
     return filters.getSetResponseHeaders().stream()
-        .map(filter -> RouteSetResponseHeaderFilter.builder()
-            .route(route)
-            .name(filter.getName())
-            .value(filter.getValue())
-            .build())
+        .map(
+            filter ->
+                RouteSetResponseHeaderFilter.builder()
+                    .route(route)
+                    .name(filter.getName())
+                    .value(filter.getValue())
+                    .build())
         .collect(Collectors.toList());
+  }
+
+  public RouteSetStatusFilter createSetStatusFilter(Filters filters, Route route) {
+    if (filters == null || filters.getSetStatus() == null) {
+      return null;
+    }
+
+    return RouteSetStatusFilter.builder()
+        .route(route)
+        .status(filters.getSetStatus().getStatus())
+        .build();
   }
 }
