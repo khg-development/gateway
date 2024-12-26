@@ -381,4 +381,21 @@ public class FilterUtils {
         .template(filters.getSetPath().getTemplate())
         .build();
   }
+
+  public List<RouteSetRequestHeaderFilter> createSetRequestHeaderFilters(
+      Filters filters, Route route) {
+    if (filters == null || filters.getSetRequestHeaders() == null) {
+      return new ArrayList<>();
+    }
+
+    return filters.getSetRequestHeaders().stream()
+        .map(
+            filter ->
+                RouteSetRequestHeaderFilter.builder()
+                    .route(route)
+                    .name(filter.getName())
+                    .value(filter.getValue())
+                    .build())
+        .collect(Collectors.toList());
+  }
 }

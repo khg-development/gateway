@@ -77,6 +77,7 @@ public class RouteService {
       rewriteRequestParameterFilterRepository;
   private final RouteRewriteResponseHeaderFilterRepository rewriteResponseHeaderFilterRepository;
   private final RouteSetPathFilterRepository setPathFilterRepository;
+  private final RouteSetRequestHeaderFilterRepository setRequestHeaderFilterRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -250,6 +251,7 @@ public class RouteService {
             .routeRewriteRequestParameterFilters(new ArrayList<>())
             .routeRewriteResponseHeaderFilters(new ArrayList<>())
             .routeSetPathFilter(null)
+            .routeSetRequestHeaderFilters(new ArrayList<>())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -297,8 +299,8 @@ public class RouteService {
         filterUtils.createRewriteRequestParameterFilters(f, route));
     route.setRouteRewriteResponseHeaderFilters(
         filterUtils.createRewriteResponseHeaderFilters(f, route));
-    route.setRouteSetPathFilter(
-        filterUtils.createSetPathFilter(f, route));
+    route.setRouteSetPathFilter(filterUtils.createSetPathFilter(f, route));
+    route.setRouteSetRequestHeaderFilters(filterUtils.createSetRequestHeaderFilters(f, route));
 
     return route;
   }
@@ -353,6 +355,7 @@ public class RouteService {
     rewriteRequestParameterFilterRepository.deleteByRoute(existingRoute);
     rewriteResponseHeaderFilterRepository.deleteByRoute(existingRoute);
     setPathFilterRepository.deleteByRoute(existingRoute);
+    setRequestHeaderFilterRepository.deleteByRoute(existingRoute);
 
     Predications p = request.getPredications();
     existingRoute.setRouteCookiePredications(
@@ -411,8 +414,9 @@ public class RouteService {
         filterUtils.createRewriteRequestParameterFilters(f, existingRoute));
     existingRoute.setRouteRewriteResponseHeaderFilters(
         filterUtils.createRewriteResponseHeaderFilters(f, existingRoute));
-    existingRoute.setRouteSetPathFilter(
-        filterUtils.createSetPathFilter(f, existingRoute));
+    existingRoute.setRouteSetPathFilter(filterUtils.createSetPathFilter(f, existingRoute));
+    existingRoute.setRouteSetRequestHeaderFilters(
+        filterUtils.createSetRequestHeaderFilters(f, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -861,10 +865,24 @@ public class RouteService {
     }
 
     if (request.getFilters().getSetPath() != null) {
-      FilterDefinition filterDefinition = definitionUtils.createFilterDefinition(
-          SET_PATH,
-          request.getFilters().getSetPath().getTemplate());
+      FilterDefinition filterDefinition =
+          definitionUtils.createFilterDefinition(
+              SET_PATH, request.getFilters().getSetPath().getTemplate());
       filters.add(filterDefinition);
+    }
+
+    if (request.getFilters().getSetRequestHeaders() != null
+        && !request.getFilters().getSetRequestHeaders().isEmpty()) {
+      request
+          .getFilters()
+          .getSetRequestHeaders()
+          .forEach(
+              filter -> {
+                FilterDefinition filterDefinition =
+                    definitionUtils.createFilterDefinition(
+                        SET_REQUEST_HEADER, filter.getName(), filter.getValue());
+                filters.add(filterDefinition);
+              });
     }
 
     routeDefinition.setPredicates(predicates);
@@ -1261,9 +1279,21 @@ public class RouteService {
 
     SetPathResponse setPathResponse = null;
     if (route.getRouteSetPathFilter() != null) {
-      setPathResponse = SetPathResponse.builder()
-          .template(route.getRouteSetPathFilter().getTemplate())
-          .build();
+      setPathResponse =
+          SetPathResponse.builder().template(route.getRouteSetPathFilter().getTemplate()).build();
+    }
+
+    List<SetRequestHeaderResponse> setRequestHeaderResponses = new ArrayList<>();
+    if (route.getRouteSetRequestHeaderFilters() != null) {
+      setRequestHeaderResponses =
+          route.getRouteSetRequestHeaderFilters().stream()
+              .map(
+                  filter ->
+                      SetRequestHeaderResponse.builder()
+                          .name(filter.getName())
+                          .value(filter.getValue())
+                          .build())
+              .toList();
     }
 
     return RouteResponse.builder()
@@ -1311,6 +1341,7 @@ public class RouteService {
                 .rewriteRequestParameters(rewriteRequestParameterResponses)
                 .rewriteResponseHeaders(rewriteResponseHeaderResponses)
                 .setPath(setPathResponse)
+                .setRequestHeaders(setRequestHeaderResponses)
                 .build())
         .build();
   }
