@@ -332,4 +332,19 @@ public class FilterUtils {
             .build())
         .collect(Collectors.toList());
   }
+
+  public List<RouteRewriteRequestParameterFilter> createRewriteRequestParameterFilters(
+      Filters filters, Route route) {
+    if (filters == null || filters.getRewriteRequestParameters() == null) {
+      return new ArrayList<>();
+    }
+
+    return filters.getRewriteRequestParameters().stream()
+        .map(filter -> RouteRewriteRequestParameterFilter.builder()
+            .route(route)
+            .name(filter.getName())
+            .replacement(filter.getReplacement())
+            .build())
+        .collect(Collectors.toList());
+  }
 }

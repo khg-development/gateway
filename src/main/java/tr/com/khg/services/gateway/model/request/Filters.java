@@ -30,4 +30,5 @@ public class Filters {
   private RequestRateLimiterRequest requestRateLimiter;
   private List<RewriteLocationResponseHeaderRequest> rewriteLocationResponseHeaders;
   private List<RewritePathRequest> rewritePaths;
+  private List<RewriteRequestParameterRequest> rewriteRequestParameters;
 }
