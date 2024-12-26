@@ -72,6 +72,7 @@ public class RouteService {
   private final RouteRequestRateLimiterFilterRepository requestRateLimiterFilterRepository;
   private final RouteRewriteLocationResponseHeaderFilterRepository
       rewriteLocationResponseHeaderFilterRepository;
+  private final RouteRewritePathFilterRepository rewritePathFilterRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -240,6 +241,7 @@ public class RouteService {
             .routeRequestHeaderSizeFilters(new ArrayList<>())
             .routeRequestRateLimiterFilter(null)
             .routeRewriteLocationResponseHeaderFilters(new ArrayList<>())
+            .routeRewritePathFilters(new ArrayList<>())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -282,6 +284,8 @@ public class RouteService {
     route.setRouteRequestRateLimiterFilter(filterUtils.createRequestRateLimiterFilter(f, route));
     route.setRouteRewriteLocationResponseHeaderFilters(
         filterUtils.createRewriteLocationResponseHeaderFilters(f, route));
+    route.setRouteRewritePathFilters(
+        filterUtils.createRewritePathFilters(f, route));
 
     return route;
   }
@@ -331,6 +335,7 @@ public class RouteService {
     requestHeaderSizeFilterRepository.deleteByRoute(existingRoute);
     requestRateLimiterFilterRepository.deleteByRoute(existingRoute);
     rewriteLocationResponseHeaderFilterRepository.deleteByRoute(existingRoute);
+    rewritePathFilterRepository.deleteByRoute(existingRoute);
 
     Predications p = request.getPredications();
     existingRoute.setRouteCookiePredications(
@@ -383,6 +388,8 @@ public class RouteService {
         filterUtils.createRequestRateLimiterFilter(f, existingRoute));
     existingRoute.setRouteRewriteLocationResponseHeaderFilters(
         filterUtils.createRewriteLocationResponseHeaderFilters(f, existingRoute));
+    existingRoute.setRouteRewritePathFilters(
+        filterUtils.createRewritePathFilters(f, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -781,6 +788,18 @@ public class RouteService {
               });
     }
 
+    if (request.getFilters().getRewritePaths() != null
+        && !request.getFilters().getRewritePaths().isEmpty()) {
+      request.getFilters().getRewritePaths()
+          .forEach(filter -> {
+            FilterDefinition filterDefinition = definitionUtils.createFilterDefinition(
+                REWRITE_PATH,
+                filter.getRegexp(),
+                filter.getReplacement());
+            filters.add(filterDefinition);
+          });
+    }
+
     routeDefinition.setPredicates(predicates);
     routeDefinition.setFilters(filters);
     return routeDefinition;
@@ -1133,6 +1152,17 @@ public class RouteService {
               .toList();
     }
 
+    List<RewritePathResponse> rewritePathResponses = new ArrayList<>();
+    if (route.getRouteRewritePathFilters() != null) {
+      rewritePathResponses =
+          route.getRouteRewritePathFilters().stream()
+              .map(filter -> RewritePathResponse.builder()
+                  .regexp(filter.getRegexp())
+                  .replacement(filter.getReplacement())
+                  .build())
+              .toList();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -1173,6 +1203,7 @@ public class RouteService {
                 .requestHeaderSizes(requestHeaderSizeResponses)
                 .requestRateLimiter(requestRateLimiterResponse)
                 .rewriteLocationResponseHeaders(rewriteLocationResponseHeaderResponses)
+                .rewritePaths(rewritePathResponses)
                 .build())
         .build();
   }

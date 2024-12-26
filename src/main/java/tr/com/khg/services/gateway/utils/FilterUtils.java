@@ -317,4 +317,19 @@ public class FilterUtils {
             .build())
         .collect(Collectors.toList());
   }
+
+  public List<RouteRewritePathFilter> createRewritePathFilters(
+      Filters filters, Route route) {
+    if (filters == null || filters.getRewritePaths() == null) {
+      return new ArrayList<>();
+    }
+
+    return filters.getRewritePaths().stream()
+        .map(filter -> RouteRewritePathFilter.builder()
+            .route(route)
+            .regexp(filter.getRegexp())
+            .replacement(filter.getReplacement())
+            .build())
+        .collect(Collectors.toList());
+  }
 }

@@ -29,4 +29,5 @@ public class FiltersResponse {
   private List<RequestHeaderSizeResponse> requestHeaderSizes;
   private RequestRateLimiterResponse requestRateLimiter;
   private List<RewriteLocationResponseHeaderResponse> rewriteLocationResponseHeaders;
+  private List<RewritePathResponse> rewritePaths;
 }

@@ -39,7 +39,8 @@ public enum FilterType {
       "stripVersionMode",
       "locationHeaderName",
       "hostValue",
-      "protocolsRegex");
+      "protocolsRegex"),
+  REWRITE_PATH("RewritePath", "regexp", "replacement");
 
   private final String type;
   private final String[] args;
