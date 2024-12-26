@@ -31,4 +31,5 @@ public class FiltersResponse {
   private List<RewriteLocationResponseHeaderResponse> rewriteLocationResponseHeaders;
   private List<RewritePathResponse> rewritePaths;
   private List<RewriteRequestParameterResponse> rewriteRequestParameters;
+  private List<RewriteResponseHeaderResponse> rewriteResponseHeaders;
 }

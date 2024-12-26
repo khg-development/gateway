@@ -41,7 +41,8 @@ public enum FilterType {
       "hostValue",
       "protocolsRegex"),
   REWRITE_PATH("RewritePath", "regexp", "replacement"),
-  REWRITE_REQUEST_PARAMETER("RewriteRequestParameter", "name", "replacement");
+  REWRITE_REQUEST_PARAMETER("RewriteRequestParameter", "name", "replacement"),
+  REWRITE_RESPONSE_HEADER("RewriteResponseHeader", "name", "regexp", "replacement");
 
   private final String type;
   private final String[] args;

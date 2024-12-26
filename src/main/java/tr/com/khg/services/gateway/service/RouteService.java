@@ -75,6 +75,7 @@ public class RouteService {
   private final RouteRewritePathFilterRepository rewritePathFilterRepository;
   private final RouteRewriteRequestParameterFilterRepository
       rewriteRequestParameterFilterRepository;
+  private final RouteRewriteResponseHeaderFilterRepository rewriteResponseHeaderFilterRepository;
 
   @PostConstruct
   public void loadRoutesFromDatabase() {
@@ -245,6 +246,7 @@ public class RouteService {
             .routeRewriteLocationResponseHeaderFilters(new ArrayList<>())
             .routeRewritePathFilters(new ArrayList<>())
             .routeRewriteRequestParameterFilters(new ArrayList<>())
+            .routeRewriteResponseHeaderFilters(new ArrayList<>())
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -290,6 +292,8 @@ public class RouteService {
     route.setRouteRewritePathFilters(filterUtils.createRewritePathFilters(f, route));
     route.setRouteRewriteRequestParameterFilters(
         filterUtils.createRewriteRequestParameterFilters(f, route));
+    route.setRouteRewriteResponseHeaderFilters(
+        filterUtils.createRewriteResponseHeaderFilters(f, route));
 
     return route;
   }
@@ -341,6 +345,7 @@ public class RouteService {
     rewriteLocationResponseHeaderFilterRepository.deleteByRoute(existingRoute);
     rewritePathFilterRepository.deleteByRoute(existingRoute);
     rewriteRequestParameterFilterRepository.deleteByRoute(existingRoute);
+    rewriteResponseHeaderFilterRepository.deleteByRoute(existingRoute);
 
     Predications p = request.getPredications();
     existingRoute.setRouteCookiePredications(
@@ -397,6 +402,8 @@ public class RouteService {
         filterUtils.createRewritePathFilters(f, existingRoute));
     existingRoute.setRouteRewriteRequestParameterFilters(
         filterUtils.createRewriteRequestParameterFilters(f, existingRoute));
+    existingRoute.setRouteRewriteResponseHeaderFilters(
+        filterUtils.createRewriteResponseHeaderFilters(f, existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -823,6 +830,23 @@ public class RouteService {
               });
     }
 
+    if (request.getFilters().getRewriteResponseHeaders() != null
+        && !request.getFilters().getRewriteResponseHeaders().isEmpty()) {
+      request
+          .getFilters()
+          .getRewriteResponseHeaders()
+          .forEach(
+              filter -> {
+                FilterDefinition filterDefinition =
+                    definitionUtils.createFilterDefinition(
+                        REWRITE_RESPONSE_HEADER,
+                        filter.getName(),
+                        filter.getRegexp(),
+                        filter.getReplacement());
+                filters.add(filterDefinition);
+              });
+    }
+
     routeDefinition.setPredicates(predicates);
     routeDefinition.setFilters(filters);
     return routeDefinition;
@@ -1201,6 +1225,20 @@ public class RouteService {
               .toList();
     }
 
+    List<RewriteResponseHeaderResponse> rewriteResponseHeaderResponses = new ArrayList<>();
+    if (route.getRouteRewriteResponseHeaderFilters() != null) {
+      rewriteResponseHeaderResponses =
+          route.getRouteRewriteResponseHeaderFilters().stream()
+              .map(
+                  filter ->
+                      RewriteResponseHeaderResponse.builder()
+                          .name(filter.getName())
+                          .regexp(filter.getRegexp())
+                          .replacement(filter.getReplacement())
+                          .build())
+              .toList();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -1243,6 +1281,7 @@ public class RouteService {
                 .rewriteLocationResponseHeaders(rewriteLocationResponseHeaderResponses)
                 .rewritePaths(rewritePathResponses)
                 .rewriteRequestParameters(rewriteRequestParameterResponses)
+                .rewriteResponseHeaders(rewriteResponseHeaderResponses)
                 .build())
         .build();
   }

@@ -347,4 +347,20 @@ public class FilterUtils {
             .build())
         .collect(Collectors.toList());
   }
+
+  public List<RouteRewriteResponseHeaderFilter> createRewriteResponseHeaderFilters(
+      Filters filters, Route route) {
+    if (filters == null || filters.getRewriteResponseHeaders() == null) {
+      return new ArrayList<>();
+    }
+
+    return filters.getRewriteResponseHeaders().stream()
+        .map(filter -> RouteRewriteResponseHeaderFilter.builder()
+            .route(route)
+            .name(filter.getName())
+            .regexp(filter.getRegexp())
+            .replacement(filter.getReplacement())
+            .build())
+        .collect(Collectors.toList());
+  }
 }
