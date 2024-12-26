@@ -23,4 +23,5 @@ public class RouteResponse {
   private Boolean preserveHostHeader;
   private PredicationsResponse predications;
   private FiltersResponse filters;
+  private Boolean secureHeadersEnabled;
 }

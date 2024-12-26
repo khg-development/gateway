@@ -1,0 +1,2 @@
+ALTER TABLE routes
+    ADD COLUMN secure_headers_enabled BOOLEAN NOT NULL DEFAULT FALSE;

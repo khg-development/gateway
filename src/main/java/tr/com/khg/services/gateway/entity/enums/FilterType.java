@@ -42,7 +42,8 @@ public enum FilterType {
       "protocolsRegex"),
   REWRITE_PATH("RewritePath", "regexp", "replacement"),
   REWRITE_REQUEST_PARAMETER("RewriteRequestParameter", "name", "replacement"),
-  REWRITE_RESPONSE_HEADER("RewriteResponseHeader", "name", "regexp", "replacement");
+  REWRITE_RESPONSE_HEADER("RewriteResponseHeader", "name", "regexp", "replacement"),
+  SECURE_HEADERS("SecureHeaders");
 
   private final String type;
   private final String[] args;

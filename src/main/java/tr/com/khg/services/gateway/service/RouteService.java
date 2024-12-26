@@ -218,6 +218,7 @@ public class RouteService {
             .enabled(true)
             .activationTime(request.getActivationTime())
             .expirationTime(request.getExpirationTime())
+            .secureHeadersEnabled(request.getSecureHeadersEnabled())
             .matchTrailingSlash(
                 request.getMatchTrailingSlash() != null ? request.getMatchTrailingSlash() : true)
             .routeCookiePredications(new ArrayList<>())
@@ -311,6 +312,7 @@ public class RouteService {
     existingRoute.setMethod(request.getMethod());
     existingRoute.setActivationTime(request.getActivationTime());
     existingRoute.setExpirationTime(request.getExpirationTime());
+    existingRoute.setSecureHeadersEnabled(request.getSecureHeadersEnabled());
     existingRoute.setMatchTrailingSlash(
         request.getMatchTrailingSlash() != null
             ? request.getMatchTrailingSlash()
@@ -419,6 +421,10 @@ public class RouteService {
 
     if (request.getPreserveHostHeader()) {
       filters.add(definitionUtils.createFilterDefinition(PRESERVE_HOST_HEADER));
+    }
+
+    if (request.getSecureHeadersEnabled()) {
+      filters.add(definitionUtils.createFilterDefinition(SECURE_HEADERS));
     }
 
     boolean matchTrailingSlash =
@@ -1249,6 +1255,7 @@ public class RouteService {
         .expirationTime(route.getExpirationTime())
         .bodyLogEnabled(route.isBodyLogEnabled())
         .preserveHostHeader(route.isPreserveHostHeader())
+        .secureHeadersEnabled(route.isSecureHeadersEnabled())
         .predications(
             PredicationsResponse.builder()
                 .cookies(cookiePredicationResponses)

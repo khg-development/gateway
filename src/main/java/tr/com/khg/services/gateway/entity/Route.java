@@ -132,16 +132,19 @@ public class Route implements Serializable {
   private List<RouteRedirectToFilter> routeRedirectToFilters = new ArrayList<>();
 
   @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-  private List<RouteRemoveJsonAttributesResponseBodyFilter> routeRemoveJsonAttributesResponseBodyFilters = new ArrayList<>();
+  private List<RouteRemoveJsonAttributesResponseBodyFilter>
+      routeRemoveJsonAttributesResponseBodyFilters = new ArrayList<>();
 
   @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
   private List<RouteRemoveRequestHeaderFilter> routeRemoveRequestHeaderFilters = new ArrayList<>();
 
   @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-  private List<RouteRemoveRequestParameterFilter> routeRemoveRequestParameterFilters = new ArrayList<>();
+  private List<RouteRemoveRequestParameterFilter> routeRemoveRequestParameterFilters =
+      new ArrayList<>();
 
   @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-  private List<RouteRemoveResponseHeaderFilter> routeRemoveResponseHeaderFilters = new ArrayList<>();
+  private List<RouteRemoveResponseHeaderFilter> routeRemoveResponseHeaderFilters =
+      new ArrayList<>();
 
   @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
   private List<RouteRequestHeaderSizeFilter> routeRequestHeaderSizeFilters = new ArrayList<>();
@@ -150,16 +153,22 @@ public class Route implements Serializable {
   private RouteRequestRateLimiterFilter routeRequestRateLimiterFilter;
 
   @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-  private List<RouteRewriteLocationResponseHeaderFilter> routeRewriteLocationResponseHeaderFilters = new ArrayList<>();
+  private List<RouteRewriteLocationResponseHeaderFilter> routeRewriteLocationResponseHeaderFilters =
+      new ArrayList<>();
 
   @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
   private List<RouteRewritePathFilter> routeRewritePathFilters = new ArrayList<>();
 
   @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-  private List<RouteRewriteRequestParameterFilter> routeRewriteRequestParameterFilters = new ArrayList<>();
+  private List<RouteRewriteRequestParameterFilter> routeRewriteRequestParameterFilters =
+      new ArrayList<>();
 
   @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-  private List<RouteRewriteResponseHeaderFilter> routeRewriteResponseHeaderFilters = new ArrayList<>();
+  private List<RouteRewriteResponseHeaderFilter> routeRewriteResponseHeaderFilters =
+      new ArrayList<>();
+
+  @Column(name = "secure_headers_enabled", nullable = false)
+  private boolean secureHeadersEnabled = false;
 
   public void clearPredications() {
     routeCookiePredications.clear();

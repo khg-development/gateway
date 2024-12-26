@@ -33,4 +33,6 @@ public class RouteRequest {
   private Predications predications = new Predications();
 
   private Filters filters = new Filters();
+
+  private Boolean secureHeadersEnabled = false;
 }
