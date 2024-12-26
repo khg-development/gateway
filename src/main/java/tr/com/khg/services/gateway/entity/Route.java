@@ -170,6 +170,9 @@ public class Route implements Serializable {
   @Column(name = "secure_headers_enabled", nullable = false)
   private boolean secureHeadersEnabled = false;
 
+  @OneToOne(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+  private RouteSetPathFilter routeSetPathFilter;
+
   public void clearPredications() {
     routeCookiePredications.clear();
     routeHeaderPredications.clear();
@@ -202,5 +205,6 @@ public class Route implements Serializable {
     routeRewritePathFilters.clear();
     routeRewriteRequestParameterFilters.clear();
     routeRewriteResponseHeaderFilters.clear();
+    routeSetPathFilter = null;
   }
 }

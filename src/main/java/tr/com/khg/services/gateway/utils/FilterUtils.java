@@ -308,28 +308,31 @@ public class FilterUtils {
     }
 
     return filters.getRewriteLocationResponseHeaders().stream()
-        .map(filter -> RouteRewriteLocationResponseHeaderFilter.builder()
-            .route(route)
-            .stripVersionMode(filter.getStripVersionMode())
-            .locationHeaderName(filter.getLocationHeaderName())
-            .hostValue(filter.getHostValue())
-            .protocolsRegex(filter.getProtocolsRegex())
-            .build())
+        .map(
+            filter ->
+                RouteRewriteLocationResponseHeaderFilter.builder()
+                    .route(route)
+                    .stripVersionMode(filter.getStripVersionMode())
+                    .locationHeaderName(filter.getLocationHeaderName())
+                    .hostValue(filter.getHostValue())
+                    .protocolsRegex(filter.getProtocolsRegex())
+                    .build())
         .collect(Collectors.toList());
   }
 
-  public List<RouteRewritePathFilter> createRewritePathFilters(
-      Filters filters, Route route) {
+  public List<RouteRewritePathFilter> createRewritePathFilters(Filters filters, Route route) {
     if (filters == null || filters.getRewritePaths() == null) {
       return new ArrayList<>();
     }
 
     return filters.getRewritePaths().stream()
-        .map(filter -> RouteRewritePathFilter.builder()
-            .route(route)
-            .regexp(filter.getRegexp())
-            .replacement(filter.getReplacement())
-            .build())
+        .map(
+            filter ->
+                RouteRewritePathFilter.builder()
+                    .route(route)
+                    .regexp(filter.getRegexp())
+                    .replacement(filter.getReplacement())
+                    .build())
         .collect(Collectors.toList());
   }
 
@@ -340,11 +343,13 @@ public class FilterUtils {
     }
 
     return filters.getRewriteRequestParameters().stream()
-        .map(filter -> RouteRewriteRequestParameterFilter.builder()
-            .route(route)
-            .name(filter.getName())
-            .replacement(filter.getReplacement())
-            .build())
+        .map(
+            filter ->
+                RouteRewriteRequestParameterFilter.builder()
+                    .route(route)
+                    .name(filter.getName())
+                    .replacement(filter.getReplacement())
+                    .build())
         .collect(Collectors.toList());
   }
 
@@ -355,12 +360,25 @@ public class FilterUtils {
     }
 
     return filters.getRewriteResponseHeaders().stream()
-        .map(filter -> RouteRewriteResponseHeaderFilter.builder()
-            .route(route)
-            .name(filter.getName())
-            .regexp(filter.getRegexp())
-            .replacement(filter.getReplacement())
-            .build())
+        .map(
+            filter ->
+                RouteRewriteResponseHeaderFilter.builder()
+                    .route(route)
+                    .name(filter.getName())
+                    .regexp(filter.getRegexp())
+                    .replacement(filter.getReplacement())
+                    .build())
         .collect(Collectors.toList());
+  }
+
+  public RouteSetPathFilter createSetPathFilter(Filters filters, Route route) {
+    if (filters == null || filters.getSetPath() == null) {
+      return null;
+    }
+
+    return RouteSetPathFilter.builder()
+        .route(route)
+        .template(filters.getSetPath().getTemplate())
+        .build();
   }
 }
