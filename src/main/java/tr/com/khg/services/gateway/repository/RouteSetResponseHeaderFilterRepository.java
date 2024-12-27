@@ -1,19 +1,9 @@
 package tr.com.khg.services.gateway.repository;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
-import tr.com.khg.services.gateway.entity.Route;
 import tr.com.khg.services.gateway.entity.RouteSetResponseHeaderFilter;
+import tr.com.khg.services.gateway.repository.base.BaseRouteRepository;
 
 @Repository
 public interface RouteSetResponseHeaderFilterRepository
-    extends JpaRepository<RouteSetResponseHeaderFilter, Long> {
-
-    @Modifying
-    @Transactional
-    @Query("DELETE FROM RouteSetResponseHeaderFilter f WHERE f.route = :route")
-    void deleteByRoute(Route route);
-}
+    extends BaseRouteRepository<RouteSetResponseHeaderFilter> {}
