@@ -13,6 +13,17 @@ public class PredicationUtils {
 
   private static final String DEFAULT_REGEX = "^.+$";
 
+  public void setAllPredications(Predications p, Route route) {
+    route.setRouteCookiePredications(createCookiePredications(p, route));
+    route.setRouteHeaderPredications(createHeaderPredications(p, route));
+    route.setRouteHostPredications(createHostPredications(p, route));
+    route.setRouteQueryPredications(createQueryPredications(p, route));
+    route.setRouteRemoteAddrPredications(createRemoteAddrPredications(p, route));
+    route.setRouteWeightPredications(createWeightPredications(p, route));
+    route.setRouteXForwardedRemoteAddrPredications(
+        createXForwardedRemoteAddrPredications(p, route));
+  }
+
   public List<RouteCookiePredication> createCookiePredications(Predications p, Route route) {
     if (p.getCookies() == null) {
       return new ArrayList<>();

@@ -14,6 +14,41 @@ import tr.com.khg.services.gateway.model.request.RequestRateLimiterRequest;
 @RequiredArgsConstructor
 public class FilterUtils {
 
+  public void setAllFilters(Filters f, Route route) {
+    route.setRouteAddRequestHeaderFilters(createAddRequestHeaderFilters(f, route));
+    route.setRouteAddRequestHeaderIfNotPresentFilters(
+        createAddRequestHeaderIfNotPresentFilters(f, route));
+    route.setRouteAddRequestParameterFilters(createAddRequestParameterFilters(f, route));
+    route.setRouteAddResponseHeaderFilters(createAddResponseHeaderFilters(f, route));
+    route.setRouteCircuitBreakerFilters(createCircuitBreakerFilters(f, route));
+    route.setRouteDedupeResponseHeaderFilters(createDedupeResponseHeaderFilters(f, route));
+    route.setRouteFallbackHeadersFilters(createFallbackHeadersFilters(f, route));
+    route.setRouteLocalResponseCacheFilters(createLocalResponseCacheFilters(f, route));
+    route.setRouteMapRequestHeaderFilters(createMapRequestHeaderFilters(f, route));
+    route.setRoutePrefixPathFilters(createPrefixPathFilters(f, route));
+    route.setRouteRedirectToFilters(createRedirectToFilters(f, route));
+    route.setRouteRemoveJsonAttributesResponseBodyFilters(
+        createRemoveJsonAttributesResponseBodyFilters(f, route));
+    route.setRouteRemoveRequestHeaderFilters(createRemoveRequestHeaderFilters(f, route));
+    route.setRouteRemoveRequestParameterFilters(createRemoveRequestParameterFilters(f, route));
+    route.setRouteRemoveResponseHeaderFilters(createRemoveResponseHeaderFilters(f, route));
+    route.setRouteRequestHeaderSizeFilters(createRequestHeaderSizeFilters(f, route));
+    route.setRouteRequestRateLimiterFilter(createRequestRateLimiterFilter(f, route));
+    route.setRouteRewriteLocationResponseHeaderFilters(
+        createRewriteLocationResponseHeaderFilters(f, route));
+    route.setRouteRewritePathFilters(createRewritePathFilters(f, route));
+    route.setRouteRewriteRequestParameterFilters(createRewriteRequestParameterFilters(f, route));
+    route.setRouteRewriteResponseHeaderFilters(createRewriteResponseHeaderFilters(f, route));
+    route.setRouteSetPathFilter(createSetPathFilter(f, route));
+    route.setRouteSetRequestHeaderFilters(createSetRequestHeaderFilters(f, route));
+    route.setRouteSetResponseHeaderFilters(createSetResponseHeaderFilters(f, route));
+    route.setRouteSetStatusFilter(createSetStatusFilter(f, route));
+    route.setRouteStripPrefixFilter(createStripPrefixFilter(f, route));
+    route.setRouteRetryFilter(createRetryFilter(f, route));
+    route.setRouteRequestSizeFilter(createRequestSizeFilter(f, route));
+    route.setRouteSetRequestHostHeaderFilter(createSetRequestHostHeaderFilter(f, route));
+  }
+
   public List<RouteAddRequestHeaderFilter> createAddRequestHeaderFilters(
       Filters filters, Route route) {
     if (filters == null || filters.getAddRequestHeaders() == null) {
@@ -457,8 +492,7 @@ public class FilterUtils {
         .build();
   }
 
-  public RouteRequestSizeFilter createRequestSizeFilter(
-      Filters filters, Route route) {
+  public RouteRequestSizeFilter createRequestSizeFilter(Filters filters, Route route) {
     if (filters == null || filters.getRequestSize() == null) {
       return null;
     }

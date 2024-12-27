@@ -44,46 +44,6 @@ public class RouteService {
   private final ApiProxyRepository apiProxyRepository;
   private final ApplicationEventPublisher eventPublisher;
   private final RouteDefinitionWriter routeDefinitionWriter;
-  private final RouteCookiePredicationRepository cookieRepository;
-  private final RouteHostPredicationRepository hostPredicationRepository;
-  private final RouteQueryPredicationRepository queryPredicationRepository;
-  private final RouteWeightPredicationRepository weightPredicationRepository;
-  private final RouteHeaderPredicationRepository headerPredicationRepository;
-  private final RouteRemoteAddrPredicationRepository remoteAddrPredicationRepository;
-  private final RouteXForwardedRemoteAddrPredicationRepository forwardedAddrPredicationRepository;
-  private final RouteAddRequestHeaderFilterRepository addRequestHeaderFilterRepository;
-  private final RouteAddRequestHeaderIfNotPresentFilterRepository
-      addRequestHeaderIfNotPresentFilterRepository;
-  private final RouteAddRequestParameterFilterRepository addRequestParameterFilterRepository;
-  private final RouteAddResponseHeaderFilterRepository addResponseHeaderFilterRepository;
-  private final RouteCircuitBreakerFilterRepository circuitBreakerFilterRepository;
-  private final RouteDedupeResponseHeaderFilterRepository dedupeResponseHeaderFilterRepository;
-  private final RouteFallbackHeadersFilterRepository fallbackHeadersFilterRepository;
-  private final RouteLocalResponseCacheFilterRepository localResponseCacheFilterRepository;
-  private final RouteMapRequestHeaderFilterRepository mapRequestHeaderFilterRepository;
-  private final RoutePrefixPathFilterRepository prefixPathFilterRepository;
-  private final RouteRedirectToFilterRepository redirectToFilterRepository;
-  private final RouteRemoveJsonAttributesResponseBodyFilterRepository
-      removeJsonAttributesFilterRepository;
-  private final RouteRemoveRequestHeaderFilterRepository removeRequestHeaderFilterRepository;
-  private final RouteRemoveRequestParameterFilterRepository removeRequestParameterFilterRepository;
-  private final RouteRemoveResponseHeaderFilterRepository removeResponseHeaderFilterRepository;
-  private final RouteRequestHeaderSizeFilterRepository requestHeaderSizeFilterRepository;
-  private final RouteRequestRateLimiterFilterRepository requestRateLimiterFilterRepository;
-  private final RouteRewriteLocationResponseHeaderFilterRepository
-      rewriteLocationResponseHeaderFilterRepository;
-  private final RouteRewritePathFilterRepository rewritePathFilterRepository;
-  private final RouteRewriteRequestParameterFilterRepository
-      rewriteRequestParameterFilterRepository;
-  private final RouteRewriteResponseHeaderFilterRepository rewriteResponseHeaderFilterRepository;
-  private final RouteSetPathFilterRepository setPathFilterRepository;
-  private final RouteSetRequestHeaderFilterRepository setRequestHeaderFilterRepository;
-  private final RouteSetResponseHeaderFilterRepository setResponseHeaderFilterRepository;
-  private final RouteSetStatusFilterRepository setStatusFilterRepository;
-  private final RouteStripPrefixFilterRepository stripPrefixFilterRepository;
-  private final RouteRetryFilterRepository retryFilterRepository;
-  private final RouteRequestSizeFilterRepository requestSizeFilterRepository;
-  private final RouteSetRequestHostHeaderFilterRepository setRequestHostHeaderFilterRepository;
 
   @Transactional
   public Mono<RouteResponse> addRoute(String proxyName, RouteRequest request) {
@@ -144,8 +104,9 @@ public class RouteService {
             () -> {
               Route existingRoute = findRouteByProxyAndRouteId(proxyName, request.getRouteId());
               validateUniqueRoute(proxyName, request.getRouteId(), request);
-              updateRouteFromRequest(proxyName, existingRoute, request);
-              return routeRepository.save(existingRoute);
+              routeRepository.delete(existingRoute);
+              Route route = createRouteFromRequest(proxyName, request);
+              return routeRepository.save(route);
             })
         .subscribeOn(Schedulers.boundedElastic())
         .flatMap(this::applyExistingRouteDefinition)
@@ -190,6 +151,9 @@ public class RouteService {
             .findByName(proxyName)
             .orElseThrow(() -> new RuntimeException("Service not found: " + proxyName));
 
+    boolean matchTrailingSlash = Optional.ofNullable(request.getMatchTrailingSlash()).orElse(true);
+    boolean saveSessionEnabled = Optional.ofNullable(request.getSaveSessionEnabled()).orElse(false);
+
     Route route =
         Route.builder()
             .routeId(request.getRouteId())
@@ -200,231 +164,18 @@ public class RouteService {
             .activationTime(request.getActivationTime())
             .expirationTime(request.getExpirationTime())
             .secureHeadersEnabled(request.getSecureHeadersEnabled())
-            .matchTrailingSlash(
-                request.getMatchTrailingSlash() != null ? request.getMatchTrailingSlash() : true)
-            .routeCookiePredications(new ArrayList<>())
-            .routeHeaderPredications(new ArrayList<>())
-            .routeHostPredications(new ArrayList<>())
-            .routeQueryPredications(new ArrayList<>())
-            .routeRemoteAddrPredications(new ArrayList<>())
-            .routeXForwardedRemoteAddrPredications(new ArrayList<>())
-            .routeAddRequestHeaderFilters(new ArrayList<>())
-            .routeAddRequestHeaderIfNotPresentFilters(new ArrayList<>())
-            .routeAddRequestParameterFilters(new ArrayList<>())
-            .routeAddResponseHeaderFilters(new ArrayList<>())
-            .routeCircuitBreakerFilters(new ArrayList<>())
-            .routeDedupeResponseHeaderFilters(new ArrayList<>())
-            .routeFallbackHeadersFilters(new ArrayList<>())
-            .routeLocalResponseCacheFilters(new ArrayList<>())
-            .routeMapRequestHeaderFilters(new ArrayList<>())
-            .routePrefixPathFilters(new ArrayList<>())
-            .routeRedirectToFilters(new ArrayList<>())
-            .routeRemoveJsonAttributesResponseBodyFilters(new ArrayList<>())
-            .routeRemoveRequestHeaderFilters(new ArrayList<>())
-            .routeRemoveRequestParameterFilters(new ArrayList<>())
-            .routeRemoveResponseHeaderFilters(new ArrayList<>())
-            .routeRequestHeaderSizeFilters(new ArrayList<>())
-            .routeRequestRateLimiterFilter(null)
-            .routeRewriteLocationResponseHeaderFilters(new ArrayList<>())
-            .routeRewritePathFilters(new ArrayList<>())
-            .routeRewriteRequestParameterFilters(new ArrayList<>())
-            .routeRewriteResponseHeaderFilters(new ArrayList<>())
-            .routeSetPathFilter(null)
-            .routeSetRequestHeaderFilters(new ArrayList<>())
-            .routeSetResponseHeaderFilters(new ArrayList<>())
-            .routeSetStatusFilter(null)
-            .routeStripPrefixFilter(null)
-            .routeRetryFilter(null)
-            .saveSessionEnabled(
-                request.getSaveSessionEnabled() != null ? request.getSaveSessionEnabled() : false)
-            .routeRequestSizeFilter(null)
-            .routeSetRequestHostHeaderFilter(null)
+            .preserveHostHeader(request.getPreserveHostHeader())
+            .matchTrailingSlash(matchTrailingSlash)
+            .saveSessionEnabled(saveSessionEnabled)
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
     route.setRouteDefinition(routeDefinition);
-
-    Predications p = request.getPredications();
-    route.setRouteCookiePredications(predicationUtils.createCookiePredications(p, route));
-    route.setRouteHeaderPredications(predicationUtils.createHeaderPredications(p, route));
-    route.setRouteHostPredications(predicationUtils.createHostPredications(p, route));
-    route.setRouteQueryPredications(predicationUtils.createQueryPredications(p, route));
-    route.setRouteRemoteAddrPredications(predicationUtils.createRemoteAddrPredications(p, route));
-    route.setRouteWeightPredications(predicationUtils.createWeightPredications(p, route));
-    route.setRouteXForwardedRemoteAddrPredications(
-        predicationUtils.createXForwardedRemoteAddrPredications(p, route));
-
-    Filters f = request.getFilters();
-    route.setRouteAddRequestHeaderFilters(filterUtils.createAddRequestHeaderFilters(f, route));
-    route.setRouteAddRequestHeaderIfNotPresentFilters(
-        filterUtils.createAddRequestHeaderIfNotPresentFilters(f, route));
-    route.setRouteAddRequestParameterFilters(
-        filterUtils.createAddRequestParameterFilters(f, route));
-    route.setRouteAddResponseHeaderFilters(filterUtils.createAddResponseHeaderFilters(f, route));
-    route.setRouteCircuitBreakerFilters(filterUtils.createCircuitBreakerFilters(f, route));
-    route.setRouteDedupeResponseHeaderFilters(
-        filterUtils.createDedupeResponseHeaderFilters(f, route));
-    route.setRouteFallbackHeadersFilters(filterUtils.createFallbackHeadersFilters(f, route));
-    route.setRouteLocalResponseCacheFilters(filterUtils.createLocalResponseCacheFilters(f, route));
-    route.setRouteMapRequestHeaderFilters(filterUtils.createMapRequestHeaderFilters(f, route));
-    route.setRoutePrefixPathFilters(filterUtils.createPrefixPathFilters(f, route));
-    route.setRouteRedirectToFilters(filterUtils.createRedirectToFilters(f, route));
-    route.setRouteRemoveJsonAttributesResponseBodyFilters(
-        filterUtils.createRemoveJsonAttributesResponseBodyFilters(f, route));
-    route.setRouteRemoveRequestHeaderFilters(
-        filterUtils.createRemoveRequestHeaderFilters(f, route));
-    route.setRouteRemoveRequestParameterFilters(
-        filterUtils.createRemoveRequestParameterFilters(f, route));
-    route.setRouteRemoveResponseHeaderFilters(
-        filterUtils.createRemoveResponseHeaderFilters(f, route));
-    route.setRouteRequestHeaderSizeFilters(filterUtils.createRequestHeaderSizeFilters(f, route));
-    route.setRouteRequestRateLimiterFilter(filterUtils.createRequestRateLimiterFilter(f, route));
-    route.setRouteRewriteLocationResponseHeaderFilters(
-        filterUtils.createRewriteLocationResponseHeaderFilters(f, route));
-    route.setRouteRewritePathFilters(filterUtils.createRewritePathFilters(f, route));
-    route.setRouteRewriteRequestParameterFilters(
-        filterUtils.createRewriteRequestParameterFilters(f, route));
-    route.setRouteRewriteResponseHeaderFilters(
-        filterUtils.createRewriteResponseHeaderFilters(f, route));
-    route.setRouteSetPathFilter(filterUtils.createSetPathFilter(f, route));
-    route.setRouteSetRequestHeaderFilters(filterUtils.createSetRequestHeaderFilters(f, route));
-    route.setRouteSetResponseHeaderFilters(filterUtils.createSetResponseHeaderFilters(f, route));
-    route.setRouteSetStatusFilter(filterUtils.createSetStatusFilter(f, route));
-    route.setRouteStripPrefixFilter(filterUtils.createStripPrefixFilter(f, route));
-    route.setRouteRetryFilter(filterUtils.createRetryFilter(f, route));
-    route.setRouteRequestSizeFilter(filterUtils.createRequestSizeFilter(f, route));
-    route.setRouteSetRequestHostHeaderFilter(
-        filterUtils.createSetRequestHostHeaderFilter(request.getFilters(), route));
-
+    Predications predications = request.getPredications();
+    predicationUtils.setAllPredications(predications, route);
+    Filters filters = request.getFilters();
+    filterUtils.setAllFilters(filters, route);
     return route;
-  }
-
-  private void updateRouteFromRequest(String proxyName, Route existingRoute, RouteRequest request) {
-    ApiProxy apiProxy =
-        apiProxyRepository
-            .findByName(proxyName)
-            .orElseThrow(() -> new RuntimeException("Service not found: " + proxyName));
-
-    RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
-    existingRoute.setRouteDefinition(routeDefinition);
-    existingRoute.setApiProxy(apiProxy);
-    existingRoute.setPath(request.getPath());
-    existingRoute.setMethod(request.getMethod());
-    existingRoute.setActivationTime(request.getActivationTime());
-    existingRoute.setExpirationTime(request.getExpirationTime());
-    existingRoute.setSecureHeadersEnabled(request.getSecureHeadersEnabled());
-    existingRoute.setMatchTrailingSlash(
-        request.getMatchTrailingSlash() != null
-            ? request.getMatchTrailingSlash()
-            : existingRoute.isMatchTrailingSlash());
-
-    existingRoute.clearPredications();
-    existingRoute.clearFilters();
-    cookieRepository.deleteByRoute(existingRoute);
-    headerPredicationRepository.deleteByRoute(existingRoute);
-    hostPredicationRepository.deleteByRoute(existingRoute);
-    queryPredicationRepository.deleteByRoute(existingRoute);
-    remoteAddrPredicationRepository.deleteByRoute(existingRoute);
-    weightPredicationRepository.deleteByRoute(existingRoute);
-    forwardedAddrPredicationRepository.deleteByRoute(existingRoute);
-    addRequestHeaderFilterRepository.deleteByRoute(existingRoute);
-    addRequestHeaderIfNotPresentFilterRepository.deleteByRoute(existingRoute);
-    addRequestParameterFilterRepository.deleteByRoute(existingRoute);
-    addResponseHeaderFilterRepository.deleteByRoute(existingRoute);
-    circuitBreakerFilterRepository.deleteByRoute(existingRoute);
-    dedupeResponseHeaderFilterRepository.deleteByRoute(existingRoute);
-    fallbackHeadersFilterRepository.deleteByRoute(existingRoute);
-    localResponseCacheFilterRepository.deleteByRoute(existingRoute);
-    mapRequestHeaderFilterRepository.deleteByRoute(existingRoute);
-    prefixPathFilterRepository.deleteByRoute(existingRoute);
-    redirectToFilterRepository.deleteByRoute(existingRoute);
-    removeJsonAttributesFilterRepository.deleteByRoute(existingRoute);
-    removeRequestHeaderFilterRepository.deleteByRoute(existingRoute);
-    removeRequestParameterFilterRepository.deleteByRoute(existingRoute);
-    removeResponseHeaderFilterRepository.deleteByRoute(existingRoute);
-    requestHeaderSizeFilterRepository.deleteByRoute(existingRoute);
-    requestRateLimiterFilterRepository.deleteByRoute(existingRoute);
-    rewriteLocationResponseHeaderFilterRepository.deleteByRoute(existingRoute);
-    rewritePathFilterRepository.deleteByRoute(existingRoute);
-    rewriteRequestParameterFilterRepository.deleteByRoute(existingRoute);
-    rewriteResponseHeaderFilterRepository.deleteByRoute(existingRoute);
-    setPathFilterRepository.deleteByRoute(existingRoute);
-    setRequestHeaderFilterRepository.deleteByRoute(existingRoute);
-    setResponseHeaderFilterRepository.deleteByRoute(existingRoute);
-    setStatusFilterRepository.deleteByRoute(existingRoute);
-    stripPrefixFilterRepository.deleteByRoute(existingRoute);
-    retryFilterRepository.deleteByRoute(existingRoute);
-    requestSizeFilterRepository.deleteByRoute(existingRoute);
-    setRequestHostHeaderFilterRepository.deleteByRoute(existingRoute);
-
-    Predications p = request.getPredications();
-    existingRoute.setRouteCookiePredications(
-        predicationUtils.createCookiePredications(p, existingRoute));
-    existingRoute.setRouteHeaderPredications(
-        predicationUtils.createHeaderPredications(p, existingRoute));
-    existingRoute.setRouteHostPredications(
-        predicationUtils.createHostPredications(p, existingRoute));
-    existingRoute.setRouteQueryPredications(
-        predicationUtils.createQueryPredications(p, existingRoute));
-    existingRoute.setRouteRemoteAddrPredications(
-        predicationUtils.createRemoteAddrPredications(p, existingRoute));
-    existingRoute.setRouteWeightPredications(
-        predicationUtils.createWeightPredications(p, existingRoute));
-    existingRoute.setRouteXForwardedRemoteAddrPredications(
-        predicationUtils.createXForwardedRemoteAddrPredications(p, existingRoute));
-
-    Filters f = request.getFilters();
-    existingRoute.setRouteAddRequestHeaderFilters(
-        filterUtils.createAddRequestHeaderFilters(f, existingRoute));
-    existingRoute.setRouteAddRequestHeaderIfNotPresentFilters(
-        filterUtils.createAddRequestHeaderIfNotPresentFilters(f, existingRoute));
-    existingRoute.setRouteAddRequestParameterFilters(
-        filterUtils.createAddRequestParameterFilters(f, existingRoute));
-    existingRoute.setRouteAddResponseHeaderFilters(
-        filterUtils.createAddResponseHeaderFilters(f, existingRoute));
-    existingRoute.setRouteCircuitBreakerFilters(
-        filterUtils.createCircuitBreakerFilters(f, existingRoute));
-    existingRoute.setRouteDedupeResponseHeaderFilters(
-        filterUtils.createDedupeResponseHeaderFilters(f, existingRoute));
-    existingRoute.setRouteFallbackHeadersFilters(
-        filterUtils.createFallbackHeadersFilters(f, existingRoute));
-    existingRoute.setRouteLocalResponseCacheFilters(
-        filterUtils.createLocalResponseCacheFilters(f, existingRoute));
-    existingRoute.setRouteMapRequestHeaderFilters(
-        filterUtils.createMapRequestHeaderFilters(f, existingRoute));
-    existingRoute.setRoutePrefixPathFilters(filterUtils.createPrefixPathFilters(f, existingRoute));
-    existingRoute.setRouteRedirectToFilters(filterUtils.createRedirectToFilters(f, existingRoute));
-    existingRoute.setRouteRemoveJsonAttributesResponseBodyFilters(
-        filterUtils.createRemoveJsonAttributesResponseBodyFilters(f, existingRoute));
-    existingRoute.setRouteRemoveRequestHeaderFilters(
-        filterUtils.createRemoveRequestHeaderFilters(f, existingRoute));
-    existingRoute.setRouteRemoveRequestParameterFilters(
-        filterUtils.createRemoveRequestParameterFilters(f, existingRoute));
-    existingRoute.setRouteRemoveResponseHeaderFilters(
-        filterUtils.createRemoveResponseHeaderFilters(f, existingRoute));
-    existingRoute.setRouteRequestHeaderSizeFilters(
-        filterUtils.createRequestHeaderSizeFilters(f, existingRoute));
-    existingRoute.setRouteRequestRateLimiterFilter(
-        filterUtils.createRequestRateLimiterFilter(f, existingRoute));
-    existingRoute.setRouteRewriteLocationResponseHeaderFilters(
-        filterUtils.createRewriteLocationResponseHeaderFilters(f, existingRoute));
-    existingRoute.setRouteRewritePathFilters(
-        filterUtils.createRewritePathFilters(f, existingRoute));
-    existingRoute.setRouteRewriteRequestParameterFilters(
-        filterUtils.createRewriteRequestParameterFilters(f, existingRoute));
-    existingRoute.setRouteRewriteResponseHeaderFilters(
-        filterUtils.createRewriteResponseHeaderFilters(f, existingRoute));
-    existingRoute.setRouteSetPathFilter(filterUtils.createSetPathFilter(f, existingRoute));
-    existingRoute.setRouteSetRequestHeaderFilters(
-        filterUtils.createSetRequestHeaderFilters(f, existingRoute));
-    existingRoute.setRouteSetResponseHeaderFilters(
-        filterUtils.createSetResponseHeaderFilters(f, existingRoute));
-    existingRoute.setRouteSetStatusFilter(filterUtils.createSetStatusFilter(f, existingRoute));
-    existingRoute.setRouteStripPrefixFilter(filterUtils.createStripPrefixFilter(f, existingRoute));
-    existingRoute.setRouteRetryFilter(filterUtils.createRetryFilter(f, existingRoute));
-    existingRoute.setRouteRequestSizeFilter(filterUtils.createRequestSizeFilter(f, existingRoute));
-    existingRoute.setRouteSetRequestHostHeaderFilter(
-        filterUtils.createSetRequestHostHeaderFilter(request.getFilters(), existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -963,9 +714,9 @@ public class RouteService {
     }
 
     if (request.getFilters().getSetRequestHostHeader() != null) {
-      FilterDefinition filterDefinition = definitionUtils.createFilterDefinition(
-          SET_REQUEST_HOST_HEADER,
-          request.getFilters().getSetRequestHostHeader().getHost());
+      FilterDefinition filterDefinition =
+          definitionUtils.createFilterDefinition(
+              SET_REQUEST_HOST_HEADER, request.getFilters().getSetRequestHostHeader().getHost());
       filters.add(filterDefinition);
     }
 
@@ -1430,9 +1181,10 @@ public class RouteService {
 
     SetRequestHostHeaderResponse setRequestHostHeaderResponse = null;
     if (route.getRouteSetRequestHostHeaderFilter() != null) {
-      setRequestHostHeaderResponse = SetRequestHostHeaderResponse.builder()
-          .host(route.getRouteSetRequestHostHeaderFilter().getHost())
-          .build();
+      setRequestHostHeaderResponse =
+          SetRequestHostHeaderResponse.builder()
+              .host(route.getRouteSetRequestHostHeaderFilter().getHost())
+              .build();
     }
 
     return RouteResponse.builder()
