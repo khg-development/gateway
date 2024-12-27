@@ -38,4 +38,5 @@ public class Filters {
   private SetStatusRequest setStatus;
   private StripPrefixRequest stripPrefix;
   private RetryRequest retry;
+  private RequestSizeRequest requestSize;
 }

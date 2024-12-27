@@ -38,4 +38,5 @@ public class FiltersResponse {
   private SetStatusResponse setStatus;
   private StripPrefixResponse stripPrefix;
   private RetryResponse retry;
+  private RequestSizeResponse requestSize;
 }

@@ -59,7 +59,8 @@ public enum FilterType {
       "backoff.firstBackoff",
       "backoff.maxBackoff",
       "backoff.factor",
-      "backoff.basedOnPreviousValue");
+      "backoff.basedOnPreviousValue"),
+  REQUEST_SIZE("RequestSize", "maxSize");
 
   private final String type;
   private final String[] args;

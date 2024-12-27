@@ -456,4 +456,16 @@ public class FilterUtils {
         .basedOnPreviousValue(filters.getRetry().getBasedOnPreviousValue())
         .build();
   }
+
+  public RouteRequestSizeFilter createRequestSizeFilter(
+      Filters filters, Route route) {
+    if (filters == null || filters.getRequestSize() == null) {
+      return null;
+    }
+
+    return RouteRequestSizeFilter.builder()
+        .route(route)
+        .maxSize(filters.getRequestSize().getMaxSize())
+        .build();
+  }
 }

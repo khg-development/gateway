@@ -191,6 +191,9 @@ public class Route implements Serializable {
   @Column(name = "save_session_enabled", nullable = false)
   private boolean saveSessionEnabled = false;
 
+  @OneToOne(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+  private RouteRequestSizeFilter routeRequestSizeFilter;
+
   public void clearPredications() {
     routeCookiePredications.clear();
     routeHeaderPredications.clear();
@@ -229,5 +232,6 @@ public class Route implements Serializable {
     routeSetStatusFilter = null;
     routeStripPrefixFilter = null;
     routeRetryFilter = null;
+    routeRequestSizeFilter = null;
   }
 }
