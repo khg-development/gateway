@@ -188,6 +188,9 @@ public class Route implements Serializable {
   @OneToOne(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
   private RouteRetryFilter routeRetryFilter;
 
+  @Column(name = "save_session_enabled", nullable = false)
+  private boolean saveSessionEnabled = false;
+
   public void clearPredications() {
     routeCookiePredications.clear();
     routeHeaderPredications.clear();

@@ -24,4 +24,5 @@ public class RouteResponse {
   private PredicationsResponse predications;
   private FiltersResponse filters;
   private Boolean secureHeadersEnabled;
+  private Boolean saveSessionEnabled;
 }

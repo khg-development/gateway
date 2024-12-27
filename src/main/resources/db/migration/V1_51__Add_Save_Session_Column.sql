@@ -1,0 +1,2 @@
+ALTER TABLE routes
+    ADD COLUMN save_session_enabled BOOLEAN NOT NULL DEFAULT FALSE;

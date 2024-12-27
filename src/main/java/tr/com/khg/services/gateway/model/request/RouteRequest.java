@@ -35,4 +35,6 @@ public class RouteRequest {
   private Filters filters = new Filters();
 
   private Boolean secureHeadersEnabled = false;
+
+  private Boolean saveSessionEnabled = false;
 }

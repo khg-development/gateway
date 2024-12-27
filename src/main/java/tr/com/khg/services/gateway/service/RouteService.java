@@ -233,6 +233,8 @@ public class RouteService {
             .routeSetStatusFilter(null)
             .routeStripPrefixFilter(null)
             .routeRetryFilter(null)
+            .saveSessionEnabled(
+                request.getSaveSessionEnabled() != null ? request.getSaveSessionEnabled() : false)
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -936,6 +938,11 @@ public class RouteService {
       filters.add(filterDefinition);
     }
 
+    if (request.getSaveSessionEnabled() != null && request.getSaveSessionEnabled()) {
+      FilterDefinition filterDefinition = definitionUtils.createFilterDefinition(SAVE_SESSION);
+      filters.add(filterDefinition);
+    }
+
     routeDefinition.setPredicates(predicates);
     routeDefinition.setFilters(filters);
     return routeDefinition;
@@ -1374,23 +1381,6 @@ public class RouteService {
 
     RetryResponse retryResponse = null;
     if (route.getRouteRetryFilter() != null) {
-      //      List<String> statuses = null;
-      //      if (route.getRouteRetryFilter().getStatuses() != null
-      //          && !route.getRouteRetryFilter().getStatuses().isEmpty()) {
-      //        statuses =
-      // route.getRouteRetryFilter().getStatuses().stream().map(Enum::name).toList();
-      //      }
-      //      List<String> methods = null;
-      //      if (route.getRouteRetryFilter().getMethods() != null
-      //          && !route.getRouteRetryFilter().getMethods().isEmpty()) {
-      //        methods =
-      // route.getRouteRetryFilter().getMethods().stream().map(HttpMethod::name).toList();
-      //      }
-      //      List<String> series = null;
-      //      if (route.getRouteRetryFilter().getSeries() != null
-      //          && !route.getRouteRetryFilter().getSeries().isEmpty()) {
-      //        series = route.getRouteRetryFilter().getSeries().stream().map(Enum::name).toList();
-      //      }
       retryResponse =
           RetryResponse.builder()
               .retries(route.getRouteRetryFilter().getRetries())
@@ -1415,6 +1405,7 @@ public class RouteService {
         .bodyLogEnabled(route.isBodyLogEnabled())
         .preserveHostHeader(route.isPreserveHostHeader())
         .secureHeadersEnabled(route.isSecureHeadersEnabled())
+        .saveSessionEnabled(route.isSaveSessionEnabled())
         .predications(
             PredicationsResponse.builder()
                 .cookies(cookiePredicationResponses)
