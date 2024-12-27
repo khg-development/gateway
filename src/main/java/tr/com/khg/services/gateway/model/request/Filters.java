@@ -39,4 +39,5 @@ public class Filters {
   private StripPrefixRequest stripPrefix;
   private RetryRequest retry;
   private RequestSizeRequest requestSize;
+  private SetRequestHostHeaderRequest setRequestHostHeader;
 }

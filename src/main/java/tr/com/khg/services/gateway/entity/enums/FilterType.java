@@ -60,7 +60,8 @@ public enum FilterType {
       "backoff.maxBackoff",
       "backoff.factor",
       "backoff.basedOnPreviousValue"),
-  REQUEST_SIZE("RequestSize", "maxSize");
+  REQUEST_SIZE("RequestSize", "maxSize"),
+  SET_REQUEST_HOST_HEADER("SetRequestHostHeader", "host");
 
   private final String type;
   private final String[] args;

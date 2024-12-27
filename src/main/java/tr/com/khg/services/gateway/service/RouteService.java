@@ -83,6 +83,7 @@ public class RouteService {
   private final RouteStripPrefixFilterRepository stripPrefixFilterRepository;
   private final RouteRetryFilterRepository retryFilterRepository;
   private final RouteRequestSizeFilterRepository requestSizeFilterRepository;
+  private final RouteSetRequestHostHeaderFilterRepository setRequestHostHeaderFilterRepository;
 
   @Transactional
   public Mono<RouteResponse> addRoute(String proxyName, RouteRequest request) {
@@ -237,6 +238,7 @@ public class RouteService {
             .saveSessionEnabled(
                 request.getSaveSessionEnabled() != null ? request.getSaveSessionEnabled() : false)
             .routeRequestSizeFilter(null)
+            .routeSetRequestHostHeaderFilter(null)
             .build();
 
     RouteDefinition routeDefinition = createRouteDefinition(request, apiProxy);
@@ -291,6 +293,8 @@ public class RouteService {
     route.setRouteStripPrefixFilter(filterUtils.createStripPrefixFilter(f, route));
     route.setRouteRetryFilter(filterUtils.createRetryFilter(f, route));
     route.setRouteRequestSizeFilter(filterUtils.createRequestSizeFilter(f, route));
+    route.setRouteSetRequestHostHeaderFilter(
+        filterUtils.createSetRequestHostHeaderFilter(request.getFilters(), route));
 
     return route;
   }
@@ -351,6 +355,7 @@ public class RouteService {
     stripPrefixFilterRepository.deleteByRoute(existingRoute);
     retryFilterRepository.deleteByRoute(existingRoute);
     requestSizeFilterRepository.deleteByRoute(existingRoute);
+    setRequestHostHeaderFilterRepository.deleteByRoute(existingRoute);
 
     Predications p = request.getPredications();
     existingRoute.setRouteCookiePredications(
@@ -418,6 +423,8 @@ public class RouteService {
     existingRoute.setRouteStripPrefixFilter(filterUtils.createStripPrefixFilter(f, existingRoute));
     existingRoute.setRouteRetryFilter(filterUtils.createRetryFilter(f, existingRoute));
     existingRoute.setRouteRequestSizeFilter(filterUtils.createRequestSizeFilter(f, existingRoute));
+    existingRoute.setRouteSetRequestHostHeaderFilter(
+        filterUtils.createSetRequestHostHeaderFilter(request.getFilters(), existingRoute));
   }
 
   private RouteDefinition createRouteDefinition(RouteRequest request, ApiProxy apiProxy) {
@@ -955,6 +962,13 @@ public class RouteService {
       filters.add(filterDefinition);
     }
 
+    if (request.getFilters().getSetRequestHostHeader() != null) {
+      FilterDefinition filterDefinition = definitionUtils.createFilterDefinition(
+          SET_REQUEST_HOST_HEADER,
+          request.getFilters().getSetRequestHostHeader().getHost());
+      filters.add(filterDefinition);
+    }
+
     routeDefinition.setPredicates(predicates);
     routeDefinition.setFilters(filters);
     return routeDefinition;
@@ -1414,6 +1428,13 @@ public class RouteService {
               .build();
     }
 
+    SetRequestHostHeaderResponse setRequestHostHeaderResponse = null;
+    if (route.getRouteSetRequestHostHeaderFilter() != null) {
+      setRequestHostHeaderResponse = SetRequestHostHeaderResponse.builder()
+          .host(route.getRouteSetRequestHostHeaderFilter().getHost())
+          .build();
+    }
+
     return RouteResponse.builder()
         .routeId(route.getRouteId())
         .enabled(route.isEnabled())
@@ -1466,6 +1487,7 @@ public class RouteService {
                 .stripPrefix(stripPrefixResponse)
                 .retry(retryResponse)
                 .requestSize(requestSizeResponse)
+                .setRequestHostHeader(setRequestHostHeaderResponse)
                 .build())
         .build();
   }

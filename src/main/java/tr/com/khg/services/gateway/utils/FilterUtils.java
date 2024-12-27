@@ -468,4 +468,16 @@ public class FilterUtils {
         .maxSize(filters.getRequestSize().getMaxSize())
         .build();
   }
+
+  public RouteSetRequestHostHeaderFilter createSetRequestHostHeaderFilter(
+      Filters filters, Route route) {
+    if (filters == null || filters.getSetRequestHostHeader() == null) {
+      return null;
+    }
+
+    return RouteSetRequestHostHeaderFilter.builder()
+        .route(route)
+        .host(filters.getSetRequestHostHeader().getHost())
+        .build();
+  }
 }
