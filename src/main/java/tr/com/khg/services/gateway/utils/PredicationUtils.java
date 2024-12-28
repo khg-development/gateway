@@ -10,9 +10,6 @@ import tr.com.khg.services.gateway.model.request.Predications;
 @Component
 @RequiredArgsConstructor
 public class PredicationUtils {
-
-  private static final String DEFAULT_REGEX = "^.+$";
-
   public void setAllPredications(Predications p, Route route) {
     route.setRouteCookiePredications(createCookiePredications(p, route));
     route.setRouteHeaderPredications(createHeaderPredications(p, route));
@@ -84,7 +81,7 @@ public class PredicationUtils {
                     .regexp(
                         queryPredication.getRegexp() != null
                             ? queryPredication.getRegexp()
-                            : DEFAULT_REGEX)
+                            : RouteConstants.DEFAULT_REGEX)
                     .route(route)
                     .build())
         .toList();

@@ -196,46 +196,4 @@ public class Route implements Serializable {
 
   @OneToOne(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
   private RouteSetRequestHostHeaderFilter routeSetRequestHostHeaderFilter;
-
-  public void clearPredications() {
-    routeCookiePredications.clear();
-    routeHeaderPredications.clear();
-    routeHostPredications.clear();
-    routeQueryPredications.clear();
-    routeRemoteAddrPredications.clear();
-    routeWeightPredications.clear();
-    routeXForwardedRemoteAddrPredications.clear();
-  }
-
-  public void clearFilters() {
-    routeAddRequestHeaderFilters.clear();
-    routeAddRequestHeaderIfNotPresentFilters.clear();
-    routeAddRequestParameterFilters.clear();
-    routeAddResponseHeaderFilters.clear();
-    routeCircuitBreakerFilters.clear();
-    routeDedupeResponseHeaderFilters.clear();
-    routeFallbackHeadersFilters.clear();
-    routeLocalResponseCacheFilters.clear();
-    routeMapRequestHeaderFilters.clear();
-    routePrefixPathFilters.clear();
-    routeRedirectToFilters.clear();
-    routeRemoveJsonAttributesResponseBodyFilters.clear();
-    routeRemoveRequestHeaderFilters.clear();
-    routeRemoveRequestParameterFilters.clear();
-    routeRemoveResponseHeaderFilters.clear();
-    routeRequestHeaderSizeFilters.clear();
-    routeRequestRateLimiterFilter = null;
-    routeRewriteLocationResponseHeaderFilters.clear();
-    routeRewritePathFilters.clear();
-    routeRewriteRequestParameterFilters.clear();
-    routeRewriteResponseHeaderFilters.clear();
-    routeSetPathFilter = null;
-    routeSetRequestHeaderFilters.clear();
-    routeSetResponseHeaderFilters.clear();
-    routeSetStatusFilter = null;
-    routeStripPrefixFilter = null;
-    routeRetryFilter = null;
-    routeRequestSizeFilter = null;
-    routeSetRequestHostHeaderFilter = null;
-  }
 }
