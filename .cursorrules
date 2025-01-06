@@ -1,4 +1,3 @@
-
 You are an expert in Java programming, Spring Boot, Spring Framework, Maven, JUnit, and related Java technologies.
 
 Uygulama bir Gateway uygulamasıdır. Reactive programlama kullanılmaktadır. Tüm fonksiyonları buna göre hazırla.
@@ -109,3 +108,171 @@ Follow best practices for:
 
 Adhere to SOLID principles and maintain high cohesion and low coupling in your Spring Boot application design.
 Always keep the code clean, well-documented, and easy to maintain.
+
+## RFC Kuralları
+- Gateway Predicate testleri için RFC'ler RFC-00X formatında numaralandırılır
+- Her yeni predicate için sıradaki numara kullanılır
+- RFC'ler docs/rfc/ klasörü altında tutulur
+- RFC dosya adı formatı: RFC-XXX-Name.md
+
+## RFC İçerik Yapısı
+1. Durum bilgisi (Taslak, İnceleme, Onaylandı, Uygulandı)
+2. Özet
+3. Test gereksinimleri
+   - Test edilecek sınıflar
+   - Test senaryoları
+   - Test ortamı gereksinimleri
+   - Örnek test kodları
+4. Test coverage gereksinimleri
+5. Gelecek adımlar
+6. Referanslar
+
+## RFC Mapping
+- RFC-001: After Route Predicate Factory Tests
+- RFC-002: Before Route Predicate Factory Tests
+
+## Test Paket Yapısı
+- Entity testleri: src/test/java/tr/com/khg/services/gateway/entity
+- Repository testleri: src/test/java/tr/com/khg/services/gateway/repository
+- Request/Response model testleri: src/test/java/tr/com/khg/services/gateway/model
+- Test fixture'ları: src/test/java/tr/com/khg/services/gateway/utils/TestFixtures.java
+
+## Test Adlandırma Kuralları
+- Test sınıfı adı: TestedClass + Test (örn: RouteAfterPredicationTest)
+- Test metodu adı: when + Scenario + then + ExpectedResult
+- Test fixture metodu adı: create + EntityName (örn: createTestRoute)
+
+## Test Coverage Gereksinimleri
+- Entity sınıfları: minimum %90
+- Repository sınıfları: minimum %85
+- Request/Response modelleri: minimum %90
+
+## Test Teknolojileri
+- JUnit 5
+- AssertJ
+- Mockito
+- H2 Database (test veritabanı)
+- @DataJpaTest (repository testleri için)
+- @SpringBootTest (entegrasyon testleri için)
+
+## Test Kuralları ve Yapısı
+
+### Gateway Predicate Testleri
+- Her predicate için ayrı bir RFC dokümanı oluşturulmalı (RFC-00X formatında)
+- Her RFC için ayrı bir test sınıfı yazılmalı
+- Test sınıfları integration test olarak tasarlanmalı
+- WebTestClient kullanılarak HTTP istekleri test edilmeli
+- MockServer ile hedef servisler simüle edilmeli
+
+### Test Sınıfı Yapısı
+```java
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+class RoutePredicateTest {
+    @Autowired
+    private WebTestClient webTestClient;
+
+    @Autowired
+    private RouteService routeService;
+
+    private MockServer mockServer;
+
+    @BeforeEach
+    void setUp() {
+        // Test hazırlıkları
+    }
+
+    @AfterEach
+    void tearDown() {
+        // Test temizliği
+    }
+}
+```
+
+### Test Metot Adlandırma
+- Format: when[Senaryo]_then[BeklenenSonuç]
+- Örnek: whenRouteActivationTimeIsInFuture_thenRouteShouldBeInactive()
+
+### Test Senaryoları İçeriği
+1. Pozitif test senaryoları
+2. Negatif test senaryoları
+3. Edge case'ler
+4. Zaman bazlı senaryolar (gerektiğinde)
+5. Hata durumları
+
+### Test Ortam Gereksinimleri
+- Spring Boot Test ortamı (@SpringBootTest)
+- H2 test veritabanı
+- MockServer (hedef servis simülasyonu)
+- WebTestClient
+- TestContainers (gerektiğinde)
+
+### Test Coverage Hedefleri
+- Integration testleri: minimum %85
+- Unit testler: minimum %90
+- Entity testleri: minimum %90
+- Repository testleri: minimum %85
+- Controller testleri: minimum %85
+
+### Test Fixture Kullanımı
+- src/test/java/tr/com/khg/services/gateway/utils/TestFixtures.java içinde tanımlanmalı
+- Her entity için ayrı factory metotları olmalı
+- Test verisi oluşturma metotları statik olmalı
+```java
+public class TestFixtures {
+    public static Route createTestRoute() {
+        // Test route oluşturma
+    }
+
+    public static ApiProxy createTestProxy() {
+        // Test proxy oluşturma
+    }
+}
+```
+
+### Test Temizliği
+- Her test öncesi veritabanı temizlenmeli
+- Test sonrası kaynaklar serbest bırakılmalı
+- MockServer her test sonrası resetlenmeli
+
+### Test Dokümantasyonu
+- Her test sınıfı için JavaDoc yazılmalı
+- Karmaşık test senaryoları için metot seviyesinde açıklama eklenmeli
+- Test hazırlık ve temizlik adımları belgelenmeli
+
+### Test Kategorileri
+1. Entity Testleri
+   - JPA ilişkileri
+   - Entity validasyonları
+   - Lifecycle metotları
+
+2. Repository Testleri
+   - CRUD operasyonları
+   - Özel sorgu metotları
+   - Pagination
+
+3. Integration Testleri
+   - Predicate davranışları
+   - Route yönetimi
+   - Filter zincirleri
+
+4. Performance Testleri
+   - Yük testleri
+   - Stress testleri
+   - Response time ölçümleri
+
+### Test Araçları ve Teknolojiler
+- JUnit 5
+- AssertJ
+- Mockito
+- H2 Database
+- WebTestClient
+- MockServer
+- TestContainers (gerektiğinde)
+- Spring Boot Test
+- @DataJpaTest
+- @SpringBootTest
+
+### Test Raporlama
+- JaCoCo test coverage raporları
+- Surefire test raporları
+- Failsafe integration test raporları

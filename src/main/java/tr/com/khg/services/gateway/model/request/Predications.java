@@ -1,9 +1,14 @@
 package tr.com.khg.services.gateway.model.request;
 
 import java.util.List;
-import lombok.Data;
 
-@Data
+import lombok.*;
+
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Predications {
   private List<CookiePredication> cookies;
   private List<HeaderPredication> headers;
