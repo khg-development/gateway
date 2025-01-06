@@ -5,6 +5,7 @@ import static org.mockserver.model.HttpResponse.response;
 
 import java.time.ZonedDateTime;
 import java.util.UUID;
+import lombok.SneakyThrows;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -89,7 +90,8 @@ class RouteBeforePredicateTest {
   }
 
   @Test
-  void whenWaitUntilExpirationTime_thenRouteShouldBecomeInactive() throws InterruptedException {
+  @SneakyThrows
+  void whenWaitUntilExpirationTime_thenRouteShouldBecomeInactive() {
     final String path = TestUtils.createMockPath();
     mockServer
         .when(request().withMethod("GET").withPath(path))

@@ -6,6 +6,7 @@ import static org.mockserver.model.HttpResponse.response;
 import java.time.ZonedDateTime;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -89,6 +90,7 @@ class RouteAfterPredicateTest {
   }
 
   @Test
+  @SneakyThrows
   void whenWaitUntilActivationTime_thenRouteShouldBecomeActive() {
     final String path = TestUtils.createMockPath();
     mockServer
@@ -106,13 +108,124 @@ class RouteAfterPredicateTest {
     routeService.addRoute(testProxyName, routeRequest).block();
 
     webTestClient.get().uri(path).exchange().expectStatus().isNotFound();
+    Thread.sleep(3000);
+    webTestClient.get().uri(path).exchange().expectStatus().isOk();
+  }
 
-    try {
-      Thread.sleep(3000);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    }
+  @Test
+  void whenRouteActivationTimeIsExactlyNow_thenRouteShouldBeActive() {
+    final String path = TestUtils.createMockPath();
+    mockServer
+        .when(request().withMethod("GET").withPath(path))
+        .respond(response().withStatusCode(200));
+
+    RouteRequest routeRequest =
+        RouteRequest.builder()
+            .routeId("test-route-" + UUID.randomUUID())
+            .path(path)
+            .method(HttpMethods.GET)
+            .activationTime(ZonedDateTime.now())
+            .build();
+
+    routeService.addRoute(testProxyName, routeRequest).block();
 
     webTestClient.get().uri(path).exchange().expectStatus().isOk();
   }
+
+  @Test
+  void whenRouteActivationTimeIsNull_thenRouteShouldBeActive() {
+    final String path = TestUtils.createMockPath();
+    mockServer
+        .when(request().withMethod("GET").withPath(path))
+        .respond(response().withStatusCode(200));
+
+    RouteRequest routeRequest =
+        RouteRequest.builder()
+            .routeId("test-route-" + UUID.randomUUID())
+            .path(path)
+            .method(HttpMethods.GET)
+            .build();
+
+    routeService.addRoute(testProxyName, routeRequest).block();
+
+    webTestClient.get().uri(path).exchange().expectStatus().isOk();
+  }
+
+  @Test
+  void whenMultipleRoutesWithDifferentActivationTimes_thenShouldHandleCorrectly() {
+    final String activePath = TestUtils.createMockPath();
+    final String inactivePath = TestUtils.createMockPath();
+
+    mockServer
+        .when(request().withMethod("GET").withPath(activePath))
+        .respond(response().withStatusCode(200));
+    mockServer
+        .when(request().withMethod("GET").withPath(inactivePath))
+        .respond(response().withStatusCode(200));
+
+    // Aktif route oluştur
+    RouteRequest activeRoute =
+        RouteRequest.builder()
+            .routeId("test-route-active-" + UUID.randomUUID())
+            .path(activePath)
+            .method(HttpMethods.GET)
+            .activationTime(ZonedDateTime.now().minusHours(1))
+            .build();
+
+    // İnaktif route oluştur
+    RouteRequest inactiveRoute =
+        RouteRequest.builder()
+            .routeId("test-route-inactive-" + UUID.randomUUID())
+            .path(inactivePath)
+            .method(HttpMethods.GET)
+            .activationTime(ZonedDateTime.now().plusHours(1))
+            .build();
+
+    routeService.addRoute(testProxyName, activeRoute).block();
+    routeService.addRoute(testProxyName, inactiveRoute).block();
+
+    // Aktif route kontrolü
+    webTestClient.get().uri(activePath).exchange().expectStatus().isOk();
+
+    // İnaktif route kontrolü
+    webTestClient.get().uri(inactivePath).exchange().expectStatus().isNotFound();
+  }
+
+    @Test
+    void whenRouteActivationTimeIsVeryFarInFuture_thenRouteShouldBeInactive() {
+        final String path = TestUtils.createMockPath();
+        mockServer
+                .when(request().withMethod("GET").withPath(path))
+                .respond(response().withStatusCode(200));
+        RouteRequest routeRequest =
+                RouteRequest.builder()
+                        .routeId("test-route-" + UUID.randomUUID())
+                        .path(path)
+                        .method(HttpMethods.GET)
+                        .activationTime(ZonedDateTime.now().plusYears(100))
+                        .build();
+
+        routeService.addRoute(testProxyName, routeRequest).block();
+
+        webTestClient.get().uri(path).exchange().expectStatus().isNotFound();
+    }
+
+    @Test
+    void whenRouteActivationTimeIsVeryFarInPast_thenRouteShouldBeActive() {
+        final String path = TestUtils.createMockPath();
+        mockServer
+                .when(request().withMethod("GET").withPath(path))
+                .respond(response().withStatusCode(200));
+        RouteRequest routeRequest =
+                RouteRequest.builder()
+                        .routeId("test-route-" + UUID.randomUUID())
+                        .path(path)
+                        .method(HttpMethods.GET)
+                        .activationTime(ZonedDateTime.now().minusYears(100))
+                        .build();
+
+        routeService.addRoute(testProxyName, routeRequest).block();
+
+        webTestClient.get().uri(path).exchange().expectStatus().isOk();
+    }
 }

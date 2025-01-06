@@ -66,6 +66,7 @@ Dependency Injection and IoC
 - Leverage Spring's IoC container for managing bean lifecycles.
 
 Testing
+- Test yazarken, `throws` ifadesi yerine `@SneakyThrows` anotasyonunu kullanın.
 - Write unit tests using JUnit 5 and Spring Boot Test.
 - Use MockMvc for testing web layers.
 - Implement integration tests using @SpringBootTest.
