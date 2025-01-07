@@ -169,22 +169,26 @@ Always keep the code clean, well-documented, and easy to maintain.
 ```java
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class RoutePredicateTest {
-    @Autowired
-    private WebTestClient webTestClient;
+    @Autowired private WebTestClient webTestClient;
+    @Autowired private RouteService routeService;
+    @Autowired private ApiProxyRepository apiProxyRepository;
+    @Autowired private RouteRepository routeRepository;
 
-    @Autowired
-    private RouteService routeService;
-
-    private MockServer mockServer;
+    private ClientAndServer mockServer;
+    private final String testProxyName = "test-proxy";
 
     @BeforeEach
     void setUp() {
-        // Test hazırlıkları
+        apiProxyRepository.deleteByName(testProxyName);
+        apiProxyRepository.save(
+            ApiProxy.builder().name(testProxyName).uri("http://localhost:8081").build());
+        mockServer = ClientAndServer.startClientAndServer(8081);
     }
 
     @AfterEach
     void tearDown() {
-        // Test temizliği
+      routeRepository.deleteAll();
+      mockServer.stop();
     }
 }
 ```
