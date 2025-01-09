@@ -15,14 +15,14 @@ import tr.com.khg.services.gateway.entity.enums.PredicateType;
 public class DefinitionUtils {
   public PredicateDefinition createPredicateDefinition(
       PredicateType predicateType, String... args) {
-    if (predicateType.getArgs().length != args.length) {
-      throw new IllegalArgumentException("Number of arguments does not match predicate type");
-    }
     PredicateDefinition methodPredicate = new PredicateDefinition();
     methodPredicate.setName(predicateType.getType());
-    for (int i = 0; i < predicateType.getArgs().length; i++) {
-      methodPredicate.addArg(predicateType.getArgs()[i], args[i]);
+    Map<String, String> arguments = new HashMap<>();
+    for (int i = 0; i < args.length; i++) {
+      String argName = "_genkey_" + i;
+      arguments.put(argName, args[i]);
     }
+    methodPredicate.setArgs(arguments);
     return methodPredicate;
   }
 

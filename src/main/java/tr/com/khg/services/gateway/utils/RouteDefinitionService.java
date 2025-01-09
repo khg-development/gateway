@@ -92,10 +92,10 @@ public class RouteDefinitionService {
 
     if (request.getPredications().getHosts() != null
         && !request.getPredications().getHosts().isEmpty()) {
-      String hostPatterns =
+      String[] hostPatterns =
           request.getPredications().getHosts().stream()
               .map(HostPredication::getPattern)
-              .collect(Collectors.joining(","));
+              .toArray(String[]::new);
       predicates.add(definitionUtils.createPredicateDefinition(HOST, hostPatterns));
     }
 

@@ -3,7 +3,9 @@ package tr.com.khg.services.gateway.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.cloud.gateway.event.RefreshRoutesEvent;
 import org.springframework.cloud.gateway.route.RouteDefinitionWriter;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
@@ -16,6 +18,7 @@ import tr.com.khg.services.gateway.repository.RouteRepository;
 public class StartupConfigurationCreationService
     implements ApplicationListener<ApplicationReadyEvent> {
   private final RouteRepository routeRepository;
+  private final ApplicationEventPublisher eventPublisher;
   private final RouteDefinitionWriter routeDefinitionWriter;
 
   @Override
@@ -40,7 +43,11 @@ public class StartupConfigurationCreationService
                                 "Error loading route {}: {}",
                                 route.getRouteId(),
                                 error.getMessage())))
-        .doOnComplete(() -> log.info("All routes loaded successfully"))
+        .doOnComplete(
+            () -> {
+              eventPublisher.publishEvent(new RefreshRoutesEvent(this));
+              log.info("All routes loaded successfully");
+            })
         .doOnError(error -> log.error("Error loading routes: {}", error.getMessage()))
         .subscribe();
   }

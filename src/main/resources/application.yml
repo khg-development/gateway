@@ -10,11 +10,11 @@ spring:
 
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: 192.168.1.187
+      port: 7007
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/gateway
+    url: jdbc:postgresql://192.168.1.187:7006/postgres
     username: p0sTgUS3r
     password: p0StgResQl
     driver-class-name: org.postgresql.Driver
