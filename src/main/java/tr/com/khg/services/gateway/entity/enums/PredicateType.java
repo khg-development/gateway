@@ -4,14 +4,14 @@ import lombok.Getter;
 
 @Getter
 public enum PredicateType {
-  PATH("Path", "pattern", "matchTrailingSlash"),
-  METHOD("Method", "method"),
-  AFTER("After", "datetime"),
-  BEFORE("Before", "datetime"),
-  BETWEEN("Between", "datetime1", "datetime2"),
-  COOKIE("Cookie", "name", "regexp"),
-  HEADER("Header", "header", "regexp"),
-  HOST("Host", "patterns"),
+  PATH("Path"),
+  METHOD("Method"),
+  AFTER("After"),
+  BEFORE("Before"),
+  BETWEEN("Between"),
+  COOKIE("Cookie"),
+  HEADER("Header"),
+  HOST("Host"),
   QUERY("Query", "param", "regexp", "required"),
   REMOTE_ADDR("RemoteAddr", "sources"),
   WEIGHT("Weight", "weight.group", "weight.weight"),

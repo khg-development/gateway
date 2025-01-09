@@ -12,7 +12,10 @@ import org.junit.jupiter.api.Test;
 import org.mockserver.integration.ClientAndServer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cloud.gateway.route.RouteDefinitionLocator;
+import org.springframework.cloud.gateway.route.RouteDefinitionWriter;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import reactor.core.publisher.Mono;
 import tr.com.khg.services.gateway.entity.ApiProxy;
 import tr.com.khg.services.gateway.entity.enums.HttpMethods;
 import tr.com.khg.services.gateway.model.request.RouteRequest;
@@ -25,12 +28,11 @@ import tr.com.khg.services.gateway.utils.TestUtils;
 class RouteBeforePredicateTest {
 
   @Autowired private WebTestClient webTestClient;
-
   @Autowired private RouteService routeService;
-
   @Autowired private ApiProxyRepository apiProxyRepository;
-
   @Autowired private RouteRepository routeRepository;
+  @Autowired private RouteDefinitionLocator routeDefinitionLocator;
+  @Autowired private RouteDefinitionWriter routeDefinitionWriter;
 
   private ClientAndServer mockServer;
   private final String testProxyName = "test-proxy";
@@ -46,6 +48,14 @@ class RouteBeforePredicateTest {
   @AfterEach
   void tearDown() {
     routeRepository.deleteAll();
+    routeDefinitionLocator
+        .getRouteDefinitions()
+        .flatMap(
+            routeDefinition ->
+                routeDefinitionWriter
+                    .delete(Mono.just(routeDefinition.getId()))
+                    .onErrorResume(e -> Mono.empty()))
+        .blockLast();
     mockServer.stop();
   }
 
