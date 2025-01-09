@@ -169,27 +169,41 @@ Always keep the code clean, well-documented, and easy to maintain.
 ```java
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class RoutePredicateTest {
-    @Autowired private WebTestClient webTestClient;
-    @Autowired private RouteService routeService;
-    @Autowired private ApiProxyRepository apiProxyRepository;
-    @Autowired private RouteRepository routeRepository;
+  @Autowired private WebTestClient webTestClient;
+  @Autowired private RouteService routeService;
+  @Autowired private ApiProxyRepository apiProxyRepository;
+  @Autowired private RouteRepository routeRepository;
+  @Autowired private RouteDefinitionLocator routeDefinitionLocator;
+  @Autowired private RouteDefinitionWriter routeDefinitionWriter;
+  @Autowired private ApplicationEventPublisher eventPublisher;
 
     private ClientAndServer mockServer;
     private final String testProxyName = "test-proxy";
 
-    @BeforeEach
-    void setUp() {
-        apiProxyRepository.deleteByName(testProxyName);
-        apiProxyRepository.save(
-            ApiProxy.builder().name(testProxyName).uri("http://localhost:8081").build());
-        mockServer = ClientAndServer.startClientAndServer(8081);
-    }
+  @BeforeEach
+  void setUp() {
+    apiProxyRepository.deleteByName(testProxyName);
+    apiProxyRepository.save(
+        ApiProxy.builder().name(testProxyName).uri("http://localhost:8081").build());
+    mockServer = ClientAndServer.startClientAndServer(8081);
+  }
 
-    @AfterEach
-    void tearDown() {
-      routeRepository.deleteAll();
-      mockServer.stop();
-    }
+  @AfterEach
+  void tearDown() {
+    routeRepository.deleteAll();
+    routeDefinitionLocator
+        .getRouteDefinitions()
+        .flatMap(
+            routeDefinition ->
+                routeDefinitionWriter
+                    .delete(Mono.just(routeDefinition.getId()))
+                    .onErrorResume(e -> Mono.empty()))
+        .blockLast();
+
+    eventPublisher.publishEvent(new RefreshRoutesEvent(this));
+
+    mockServer.stop();
+  }
 }
 ```
 
